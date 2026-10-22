@@ -1,0 +1,31 @@
+id: LNX-ACC-001
+title: Password aging is configured for new accounts
+platform: linux
+category: Accounts & passwords
+severity: low
+rationale: >
+  PASS_MAX_DAYS, PASS_MIN_DAYS and PASS_WARN_AGE in login.defs set the aging policy of every
+  account created afterwards. A minimum age stops users from cycling back to an old password.
+references:
+  cis:
+    - "Ensure password expiration is configured"
+    - "Ensure minimum password days is configured"
+    - "Ensure password expiration warning days is configured"
+  anssi: [10]
+check:
+  all:
+    - fact: login_defs.pass_max_days
+      op: lte
+      value: 365
+    - fact: login_defs.pass_min_days
+      op: gte
+      value: 1
+    - fact: login_defs.pass_warn_age
+      op: gte
+      value: 7
+remediation:
+  summary: Set PASS_MAX_DAYS 365, PASS_MIN_DAYS 1 and PASS_WARN_AGE 7 in /etc/login.defs, then apply them to existing accounts with chage.
+  command: |
+    sudo sed -i -E 's/^#?\s*PASS_MAX_DAYS.*/PASS_MAX_DAYS 365/; s/^#?\s*PASS_MIN_DAYS.*/PASS_MIN_DAYS 1/; s/^#?\s*PASS_WARN_AGE.*/PASS_WARN_AGE 7/' /etc/login.defs
+    sudo chage --maxdays 365 --mindays 1 --warndays 7 <user>
+  impact: NIST SP 800-63B discourages forced periodic changes when passwords are long and checked against breach lists; record an exception if that is your policy.

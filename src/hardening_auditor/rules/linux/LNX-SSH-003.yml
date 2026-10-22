@@ -1,0 +1,24 @@
+id: LNX-SSH-003
+title: SSH refuses empty passwords
+platform: linux
+category: SSH
+severity: high
+rationale: >
+  An account with an empty password and PermitEmptyPasswords yes can be opened by anyone who
+  knows the user name.
+references:
+  cis:
+    - "Ensure sshd PermitEmptyPasswords is disabled"
+  anssi: [10]
+applies_if:
+  fact: ssh.installed
+  op: eq
+  value: true
+check:
+  fact: ssh.permitemptypasswords
+  op: eq
+  value: "no"
+remediation:
+  summary: Set PermitEmptyPasswords no.
+  command: echo 'PermitEmptyPasswords no' | sudo tee /etc/ssh/sshd_config.d/10-hardening.conf
+  impact: None.

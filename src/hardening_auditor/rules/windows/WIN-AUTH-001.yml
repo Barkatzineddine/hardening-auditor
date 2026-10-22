@@ -1,0 +1,30 @@
+id: WIN-AUTH-001
+title: Only NTLMv2 is accepted and LM hashes are not stored
+platform: windows
+category: Authentication
+severity: high
+rationale: >
+  LM and NTLMv1 responses can be cracked in minutes or downgraded to recover the NT hash. LM
+  hashes stored in the account database are equally weak.
+references:
+  cis:
+    - "Ensure 'Network security: LAN Manager authentication level' is set to 'Send NTLMv2 response only. Refuse LM & NTLM'"
+    - "Ensure 'Network security: Do not store LAN Manager hash value on next password change' is set to 'Enabled'"
+  anssi: [11, 21]
+check:
+  all:
+    - fact: lsa.lm_compatibility_level
+      op: eq
+      value: 5
+      default: 3
+    - fact: lsa.no_lm_hash
+      op: eq
+      value: 1
+      default: 1
+remediation:
+  summary: Send NTLMv2 only and refuse LM and NTLMv1; never store LM hashes.
+  gpo: 'Computer Configuration\Policies\Windows Settings\Security Settings\Local Policies\Security Options\Network security: LAN Manager authentication level = Send NTLMv2 response only. Refuse LM & NTLM'
+  command: |
+    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name LmCompatibilityLevel -Value 5 -Type DWord
+    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name NoLMHash -Value 1 -Type DWord
+  impact: Clients still using NTLMv1 fail to authenticate. Find them first in event 4624 ("Package Name (NTLM only)" = NTLM V1) on the domain controllers.

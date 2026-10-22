@@ -1,0 +1,23 @@
+id: WIN-AUTH-003
+title: LSASS runs as a protected process (LSA protection)
+platform: windows
+category: Authentication
+severity: high
+rationale: >
+  LSA protection (RunAsPPL) prevents non-protected processes, including those of an administrator,
+  from reading LSASS memory or injecting code into it, which blocks the most common credential
+  dumping techniques.
+references:
+  cis:
+    - "Ensure 'Configure LSASS to run as a protected process' is set to 'Enabled: Enabled with UEFI Lock'"
+  anssi: [11, 14]
+check:
+  fact: lsa.run_as_ppl
+  op: in
+  value: [1, 2]
+  missing: fail
+remediation:
+  summary: Enable LSA protection, after checking in audit mode that every LSA plug-in and driver is signed.
+  gpo: Computer Configuration\Policies\Administrative Templates\System\Local Security Authority\Configure LSASS to run as a protected process = Enabled with UEFI Lock
+  command: Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name RunAsPPL -Value 1 -Type DWord  # reboot required
+  impact: Unsigned LSA plug-ins (some smart card, password filter or SSO agents) stop loading. Audit first with events 3065/3066 in the CodeIntegrity log.

@@ -1,0 +1,20 @@
+id: LNX-ACC-006
+title: Root is the only account with UID 0
+platform: linux
+category: Accounts & passwords
+severity: critical
+rationale: >
+  Any other UID 0 account is a full root account that escapes sudo logging and is a classic
+  persistence backdoor.
+references:
+  cis:
+    - "Ensure root is the only UID 0 account"
+  anssi: [5, 8]
+check:
+  fact: accounts.uid0
+  op: subset_of
+  value: [root]
+remediation:
+  summary: Investigate every other UID 0 account as a potential compromise, then remove it or give it a unique UID.
+  command: 'awk -F: ''$3 == 0 { print $1 }'' /etc/passwd'
+  impact: Treat an unexpected UID 0 account as a security incident before changing it.

@@ -1,0 +1,29 @@
+id: WIN-FW-002
+title: Firewall blocks inbound connections by default
+platform: windows
+category: Firewall
+severity: medium
+rationale: >
+  A default-allow inbound policy makes every listening service reachable. Blocking by default and
+  allowing only what the server publishes reduces the attack surface to a known list.
+references:
+  cis:
+    - "Ensure 'Windows Firewall: Domain: Inbound connections' is set to 'Block (default)'"
+    - "Ensure 'Windows Firewall: Private: Inbound connections' is set to 'Block (default)'"
+    - "Ensure 'Windows Firewall: Public: Inbound connections' is set to 'Block (default)'"
+  anssi: [17, 19]
+check:
+  all:
+    - fact: firewall.domain.default_inbound
+      op: eq
+      value: block
+    - fact: firewall.private.default_inbound
+      op: eq
+      value: block
+    - fact: firewall.public.default_inbound
+      op: eq
+      value: block
+remediation:
+  summary: Set the default inbound action to Block on every profile and keep explicit allow rules.
+  command: Set-NetFirewallProfile -Profile Domain,Private,Public -DefaultInboundAction Block
+  impact: Services without an allow rule become unreachable; review Get-NetFirewallRule -Direction Inbound -Enabled True first.

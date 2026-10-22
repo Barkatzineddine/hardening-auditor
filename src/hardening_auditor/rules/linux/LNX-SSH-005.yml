@@ -1,0 +1,23 @@
+id: LNX-SSH-005
+title: SSH limits authentication attempts to four per connection
+platform: linux
+category: SSH
+severity: low
+rationale: >
+  A low MaxAuthTries slows down brute force and makes repeated failures show up quickly in the logs.
+references:
+  cis:
+    - "Ensure sshd MaxAuthTries is configured"
+  anssi: [10]
+applies_if:
+  fact: ssh.installed
+  op: eq
+  value: true
+check:
+  fact: ssh.maxauthtries
+  op: lte
+  value: 4
+remediation:
+  summary: Set MaxAuthTries 4 (or lower).
+  command: echo 'MaxAuthTries 4' | sudo tee /etc/ssh/sshd_config.d/10-hardening.conf
+  impact: Users with many keys loaded in their agent may need IdentitiesOnly in their client configuration.

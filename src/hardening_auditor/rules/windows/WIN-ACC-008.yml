@@ -1,0 +1,38 @@
+id: WIN-ACC-008
+title: LAPS manages the local administrator password
+platform: windows
+category: Accounts & passwords
+severity: high
+rationale: >
+  When every machine shares the same local administrator password, one compromised host gives
+  access to all of them. Windows LAPS (or legacy Microsoft LAPS) sets a unique, rotated password
+  per machine and stores it in Active Directory or Entra ID.
+references:
+  cis:
+    - "Ensure 'Configure password backup directory' is set to 'Enabled: Active Directory' or 'Enabled: Azure Active Directory' (MS only)"
+  anssi: [11, 12]
+applies_if:
+  all:
+    - fact: os.domain_joined
+      op: eq
+      value: true
+    - fact: os.product_type
+      op: ne
+      value: domain_controller
+check:
+  any:
+    - fact: laps.windows.backup_directory
+      op: in
+      value: [1, 2]
+      missing: fail
+    - fact: laps.legacy.enabled
+      op: eq
+      value: 1
+      missing: fail
+remediation:
+  summary: Enable Windows LAPS by GPO and back the password up to Active Directory (1) or Entra ID (2).
+  gpo: Computer Configuration\Policies\Administrative Templates\System\LAPS\Configure password backup directory = Active Directory
+  command: |
+    Update-LapsADSchema
+    Set-LapsADComputerSelfPermission -Identity "OU=Servers,DC=example,DC=local"
+  impact: Administrators read the password from AD (Get-LapsADPassword) instead of a shared vault entry.

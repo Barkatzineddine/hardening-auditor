@@ -1,0 +1,29 @@
+id: WIN-AUD-003
+title: Process creation is audited with the command line
+platform: windows
+category: Audit & logging
+severity: medium
+rationale: >
+  Event 4688 with the full command line shows what attackers actually run (encoded PowerShell,
+  LOLBins, credential dumping tools). Without the command line, the event is of little use.
+references:
+  cis:
+    - "Ensure 'Audit Process Creation' is set to include 'Success'"
+    - "Ensure 'Include command line in process creation events' is set to 'Enabled'"
+  anssi: [36]
+check:
+  all:
+    - fact: audit.process_creation
+      op: in
+      value: [success, success_and_failure]
+    - fact: audit.process_creation_cmdline
+      op: eq
+      value: 1
+      default: 0
+remediation:
+  summary: Audit process creation and include the command line in event 4688.
+  gpo: Computer Configuration\Policies\Administrative Templates\System\Audit Process Creation\Include command line in process creation events = Enabled
+  command: |
+    auditpol /set /subcategory:"{0CCE922B-69AE-11D9-BED3-505054503030}" /success:enable
+    Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit' -Name ProcessCreationIncludeCmdLine_Enabled -Value 1 -Type DWord
+  impact: Command lines can contain secrets passed as arguments; restrict who can read the Security log.

@@ -1,0 +1,20 @@
+id: WIN-SYS-001
+title: The operating system volume is encrypted with BitLocker
+platform: windows
+category: System
+severity: medium
+rationale: >
+  Without disk encryption, anyone with physical access to the disk, a backup of the virtual disk
+  or a decommissioned drive can read the system, including cached credentials and the SAM.
+references:
+  anssi: [31]
+  other:
+    - "Microsoft security baseline: BitLocker Drive Encryption for operating system drives"
+check:
+  fact: bitlocker.os_volume.protection_on
+  op: eq
+  value: true
+remediation:
+  summary: Enable BitLocker with a TPM protector on the OS volume and escrow the recovery key to Active Directory or Entra ID.
+  command: Enable-BitLocker -MountPoint $env:SystemDrive -EncryptionMethod XtsAes256 -TpmProtector -UsedSpaceOnly
+  impact: Requires a TPM (or vTPM on virtual machines). Store recovery keys before enabling; a lost key means lost data.

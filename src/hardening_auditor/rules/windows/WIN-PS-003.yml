@@ -1,0 +1,20 @@
+id: WIN-PS-003
+title: PowerShell runs in Constrained Language Mode
+platform: windows
+category: PowerShell
+severity: medium
+rationale: >
+  Constrained Language Mode, enforced by App Control for Business (WDAC) or AppLocker script rules,
+  blocks arbitrary .NET and Win32 calls from PowerShell, which stops most in-memory attack tooling.
+  The result reflects the session that ran the collector.
+references:
+  anssi: [14]
+  other:
+    - "Microsoft: PowerShell Constrained Language Mode enforced by App Control for Business (WDAC) or AppLocker"
+check:
+  fact: powershell.language_mode
+  op: eq
+  value: ConstrainedLanguage
+remediation:
+  summary: Enforce an App Control for Business (WDAC) or AppLocker policy with script enforcement; PowerShell then switches to Constrained Language Mode for untrusted code. Do not rely on the __PSLockdownPolicy variable, which is trivial to bypass.
+  impact: Administrative scripts must be signed or allowed by the policy. Roll out in audit mode first; this is a project, not a quick fix.

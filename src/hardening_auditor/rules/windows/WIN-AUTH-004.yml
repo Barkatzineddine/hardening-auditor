@@ -1,0 +1,24 @@
+id: WIN-AUTH-004
+title: Credential Guard is running
+platform: windows
+category: Authentication
+severity: medium
+rationale: >
+  Credential Guard isolates NTLM hashes and Kerberos tickets in a virtualization-based enclave,
+  so even an attacker with SYSTEM rights cannot extract them from LSASS.
+references:
+  cis:
+    - "Ensure 'Turn On Virtualization Based Security: Credential Guard Configuration' is set to 'Enabled with UEFI lock' (MS Only)"
+  anssi: [11, 14]
+applies_if:
+  fact: os.product_type
+  op: ne
+  value: domain_controller
+check:
+  fact: deviceguard.credential_guard_running
+  op: eq
+  value: true
+remediation:
+  summary: Enable virtualization-based security with Credential Guard on hardware that supports it (UEFI, Secure Boot, VT-x/AMD-V, TPM 2.0).
+  gpo: Computer Configuration\Policies\Administrative Templates\System\Device Guard\Turn On Virtualization Based Security = Enabled; Credential Guard Configuration = Enabled with UEFI lock
+  impact: Breaks NTLMv1, MS-CHAPv2 single sign-on (some Wi-Fi and VPN setups), Kerberos unconstrained delegation and DES. Not supported on domain controllers. On virtual machines it needs nested virtualization.

@@ -1,0 +1,40 @@
+id: WIN-NET-006
+title: Anonymous enumeration of accounts and shares is blocked
+platform: windows
+category: Network protocols
+severity: medium
+rationale: >
+  Anonymous (null session) enumeration hands an unauthenticated attacker the list of accounts and
+  shares, the first step of password spraying and lateral movement.
+references:
+  cis:
+    - "Ensure 'Network access: Do not allow anonymous enumeration of SAM accounts' is set to 'Enabled' (MS only)"
+    - "Ensure 'Network access: Do not allow anonymous enumeration of SAM accounts and shares' is set to 'Enabled' (MS only)"
+    - "Ensure 'Network access: Let Everyone permissions apply to anonymous users' is set to 'Disabled'"
+  anssi: [9]
+applies_if:
+  fact: os.product_type
+  op: ne
+  value: domain_controller
+check:
+  all:
+    - fact: lsa.restrict_anonymous_sam
+      op: eq
+      value: 1
+      default: 1
+    - fact: lsa.restrict_anonymous
+      op: eq
+      value: 1
+      default: 0
+    - fact: lsa.everyone_includes_anonymous
+      op: eq
+      value: 0
+      default: 0
+remediation:
+  summary: Block anonymous enumeration of SAM accounts and shares.
+  gpo: Computer Configuration\Policies\Windows Settings\Security Settings\Local Policies\Security Options\Network access
+  command: |
+    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name RestrictAnonymousSAM -Value 1 -Type DWord
+    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name RestrictAnonymous -Value 1 -Type DWord
+    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name EveryoneIncludesAnonymous -Value 0 -Type DWord
+  impact: Very old clients and some trust scenarios with NT4-era domains rely on anonymous access.

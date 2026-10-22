@@ -1,0 +1,24 @@
+id: WIN-PS-002
+title: Windows PowerShell 2.0 engine is removed
+platform: windows
+category: PowerShell
+severity: high
+rationale: >
+  "powershell -Version 2" starts an engine with no script block logging, no AMSI and no
+  Constrained Language Mode, a classic downgrade that blinds the SOC.
+references:
+  anssi: [14, 35]
+  other:
+    - "Microsoft: Windows PowerShell 2.0 is deprecated and should be removed (downgrade attacks bypass logging and AMSI)"
+check:
+  fact: powershell.v2_installed
+  op: eq
+  value: false
+remediation:
+  summary: Remove the PowerShell 2.0 feature.
+  command: |
+    # Windows Server
+    Uninstall-WindowsFeature -Name PowerShell-V2
+    # Windows 10/11
+    Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2Root -NoRestart
+  impact: Scripts that explicitly require version 2 (very rare, and they also need .NET 3.5) stop working.

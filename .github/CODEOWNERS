@@ -1,0 +1,5 @@
+# The rule catalogue, the collectors and the pipeline need the owner's review.
+*                                   @Barkatzineddine
+/collectors/                        @Barkatzineddine
+/src/hardening_auditor/rules/       @Barkatzineddine
+/.github/                           @Barkatzineddine

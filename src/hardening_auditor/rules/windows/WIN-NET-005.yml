@@ -1,0 +1,20 @@
+id: WIN-NET-005
+title: NetBIOS over TCP/IP is disabled on every network adapter
+platform: windows
+category: Network protocols
+severity: medium
+rationale: >
+  NetBIOS name service (NBT-NS) broadcasts name queries that any host can answer, which exposes
+  NTLM hashes to poisoning attacks exactly like LLMNR. It is not needed in a DNS-based network.
+references:
+  cis:
+    - "Ensure 'NetBT NodeType configuration' is set to 'Enabled: P-node (recommended)' (MS only)"
+  anssi: [21]
+check:
+  fact: network.netbios.enabled_adapters
+  op: max_items
+  value: 0
+remediation:
+  summary: Disable NetBIOS over TCP/IP on every IP-enabled adapter, or push DHCP option 001 (Microsoft vendor class) "Disable NetBIOS over TCP/IP".
+  command: Get-CimInstance Win32_NetworkAdapterConfiguration -Filter 'IPEnabled=TRUE' | Invoke-CimMethod -MethodName SetTcpipNetbios -Arguments @{ TcpipNetbiosOptions = 2 }
+  impact: Legacy applications that browse the network by NetBIOS name stop working.

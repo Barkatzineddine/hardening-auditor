@@ -1,0 +1,28 @@
+id: LNX-FILE-003
+title: sshd_config is readable by root only
+platform: linux
+category: File permissions
+severity: low
+rationale: >
+  The SSH server configuration reveals allowed users, ports and authentication methods, and must
+  never be writable by anyone but root.
+references:
+  cis:
+    - "Ensure permissions on /etc/ssh/sshd_config are configured"
+  anssi: [9]
+applies_if:
+  fact: ssh.installed
+  op: eq
+  value: true
+check:
+  all:
+    - fact: files./etc/ssh/sshd_config.mode
+      op: mode_at_most
+      value: "0600"
+    - fact: files./etc/ssh/sshd_config.owner
+      op: eq
+      value: root
+remediation:
+  summary: Reset owner and mode.
+  command: sudo chown root:root /etc/ssh/sshd_config && sudo chmod 0600 /etc/ssh/sshd_config
+  impact: None.

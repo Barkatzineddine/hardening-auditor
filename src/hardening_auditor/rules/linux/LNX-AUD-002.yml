@@ -1,0 +1,35 @@
+id: LNX-AUD-002
+title: Audit rules watch identity files and sudo configuration
+platform: linux
+category: Audit & logging
+severity: medium
+rationale: >
+  Changes to /etc/passwd, /etc/shadow, /etc/group and the sudoers files are how attackers create
+  accounts and grant themselves privileges. Watching them gives the SOC a high-value, low-noise
+  detection.
+references:
+  cis:
+    - "Ensure events that modify user/group information are collected"
+    - "Ensure changes to system administration scope (sudoers) is collected"
+  anssi: [5, 36]
+check:
+  all:
+    - fact: audit.rules_watch_identity
+      op: eq
+      value: true
+    - fact: audit.rules_watch_sudoers
+      op: eq
+      value: true
+remediation:
+  summary: Add watch rules in /etc/audit/rules.d and load them.
+  command: |
+    sudo tee /etc/audit/rules.d/50-identity.rules <<'RULES'
+    -w /etc/passwd -p wa -k identity
+    -w /etc/shadow -p wa -k identity
+    -w /etc/group -p wa -k identity
+    -w /etc/gshadow -p wa -k identity
+    -w /etc/sudoers -p wa -k scope
+    -w /etc/sudoers.d -p wa -k scope
+    RULES
+    sudo augenrules --load
+  impact: Low event volume.

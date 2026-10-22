@@ -1,0 +1,26 @@
+id: WIN-ACC-003
+title: Password history of 24 and a minimum password age of one day
+platform: windows
+category: Accounts & passwords
+severity: medium
+rationale: >
+  Without a history, users cycle back to a compromised password. Without a minimum age, they
+  can change their password 24 times in a row to get the old one back and defeat the history.
+references:
+  cis:
+    - "Ensure 'Enforce password history' is set to '24 or more password(s)'"
+    - "Ensure 'Minimum password age' is set to '1 or more day(s)'"
+  anssi: [10]
+check:
+  all:
+    - fact: policy.password.history
+      op: gte
+      value: 24
+    - fact: policy.password.min_age_days
+      op: gte
+      value: 1
+remediation:
+  summary: Remember the last 24 passwords and require a minimum age of one day.
+  gpo: Computer Configuration\Policies\Windows Settings\Security Settings\Account Policies\Password Policy\Enforce password history = 24; Minimum password age = 1
+  command: net accounts /uniquepw:24 /minpwage:1
+  impact: A user who must change a leaked password twice in one day needs a helpdesk reset.

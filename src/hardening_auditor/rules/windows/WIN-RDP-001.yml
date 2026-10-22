@@ -1,0 +1,26 @@
+id: WIN-RDP-001
+title: Remote Desktop requires Network Level Authentication
+platform: windows
+category: Remote access
+severity: high
+rationale: >
+  Without NLA, the server builds a full logon session before the user authenticates, which exposes
+  the logon screen and pre-authentication code (BlueKeep class vulnerabilities) to anyone who can
+  reach port 3389.
+references:
+  cis:
+    - "Ensure 'Require user authentication for remote connections by using Network Level Authentication' is set to 'Enabled'"
+  anssi: [13, 21]
+applies_if:
+  fact: rdp.enabled
+  op: eq
+  value: true
+check:
+  fact: rdp.nla_required
+  op: eq
+  value: true
+remediation:
+  summary: Require Network Level Authentication for Remote Desktop.
+  gpo: Computer Configuration\Policies\Administrative Templates\Windows Components\Remote Desktop Services\Remote Desktop Session Host\Security\Require user authentication for remote connections by using Network Level Authentication = Enabled
+  command: Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name UserAuthentication -Value 1 -Type DWord
+  impact: Very old RDP clients without CredSSP cannot connect.

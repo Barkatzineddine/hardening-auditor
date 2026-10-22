@@ -1,0 +1,27 @@
+id: LNX-NET-001
+title: IP forwarding is disabled
+platform: linux
+category: Network stack
+severity: medium
+rationale: >
+  A host that forwards packets can be used to pivot between network segments and bypass the
+  network firewall.
+references:
+  cis:
+    - "Ensure ip forwarding is disabled"
+  anssi: [19]
+check:
+  all:
+    - fact: sysctl.net.ipv4.ip_forward
+      op: eq
+      value: 0
+    - fact: sysctl.net.ipv6.conf.all.forwarding
+      op: eq
+      value: 0
+      missing: pass
+remediation:
+  summary: Disable forwarding unless the host is a router, a VPN gateway or a container host.
+  command: |
+    printf 'net.ipv4.ip_forward = 0\nnet.ipv6.conf.all.forwarding = 0\n' | sudo tee /etc/sysctl.d/60-forwarding.conf
+    sudo sysctl --system
+  impact: Docker, Kubernetes nodes, VPN gateways and routers need forwarding; record an exception for them.

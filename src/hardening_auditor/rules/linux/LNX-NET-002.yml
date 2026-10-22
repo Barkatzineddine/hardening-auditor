@@ -1,0 +1,54 @@
+id: LNX-NET-002
+title: ICMP redirects and source-routed packets are refused
+platform: linux
+category: Network stack
+severity: medium
+rationale: >
+  Accepting ICMP redirects or source-routed packets lets an attacker on the local network reroute
+  this host's traffic through a machine they control. Sending redirects is only useful on routers.
+references:
+  cis:
+    - "Ensure icmp redirects are not accepted"
+    - "Ensure secure icmp redirects are not accepted"
+    - "Ensure packet redirect sending is disabled"
+    - "Ensure source routed packets are not accepted"
+  anssi: [19]
+check:
+  all:
+    - fact: sysctl.net.ipv4.conf.all.accept_redirects
+      op: eq
+      value: 0
+    - fact: sysctl.net.ipv4.conf.default.accept_redirects
+      op: eq
+      value: 0
+    - fact: sysctl.net.ipv4.conf.all.secure_redirects
+      op: eq
+      value: 0
+    - fact: sysctl.net.ipv4.conf.all.send_redirects
+      op: eq
+      value: 0
+    - fact: sysctl.net.ipv4.conf.all.accept_source_route
+      op: eq
+      value: 0
+    - fact: sysctl.net.ipv6.conf.all.accept_redirects
+      op: eq
+      value: 0
+      missing: pass
+    - fact: sysctl.net.ipv6.conf.all.accept_source_route
+      op: eq
+      value: 0
+      missing: pass
+remediation:
+  summary: Refuse redirects and source routing on every interface.
+  command: |
+    sudo tee /etc/sysctl.d/60-redirects.conf <<'CONF'
+    net.ipv4.conf.all.accept_redirects = 0
+    net.ipv4.conf.default.accept_redirects = 0
+    net.ipv4.conf.all.secure_redirects = 0
+    net.ipv4.conf.all.send_redirects = 0
+    net.ipv4.conf.all.accept_source_route = 0
+    net.ipv6.conf.all.accept_redirects = 0
+    net.ipv6.conf.all.accept_source_route = 0
+    CONF
+    sudo sysctl --system
+  impact: None on hosts that are not routers.

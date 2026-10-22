@@ -1,0 +1,19 @@
+id: LNX-TIME-001
+title: Time is synchronised
+platform: linux
+category: System
+severity: medium
+rationale: >
+  Kerberos, TLS certificate checks and log correlation in the SIEM all depend on an accurate clock.
+references:
+  cis:
+    - "Ensure time synchronization is in use"
+  anssi: [36]
+check:
+  fact: time.sync_active
+  op: eq
+  value: true
+remediation:
+  summary: Run chrony or systemd-timesyncd against your internal NTP servers.
+  command: sudo systemctl enable --now chrony 2>/dev/null || sudo systemctl enable --now chronyd
+  impact: None.

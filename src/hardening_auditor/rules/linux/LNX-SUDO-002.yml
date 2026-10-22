@@ -1,0 +1,24 @@
+id: LNX-SUDO-002
+title: sudo always asks for a password
+platform: linux
+category: Privilege escalation
+severity: medium
+rationale: >
+  NOPASSWD rules turn the compromise of a user session into immediate root access, without any
+  re-authentication.
+references:
+  cis:
+    - "Ensure users must provide password for privilege escalation"
+  anssi: [29]
+applies_if:
+  fact: sudo.installed
+  op: eq
+  value: true
+check:
+  fact: sudo.nopasswd_entries
+  op: eq
+  value: 0
+remediation:
+  summary: Remove NOPASSWD tags with visudo. For automation accounts, allow only the exact commands they need and record an exception.
+  command: sudo grep -rn 'NOPASSWD' /etc/sudoers /etc/sudoers.d/
+  impact: Interactive users type their password for sudo; unattended scripts need a narrow, documented rule.

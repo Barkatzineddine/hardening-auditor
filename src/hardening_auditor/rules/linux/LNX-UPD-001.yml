@@ -1,0 +1,35 @@
+id: LNX-UPD-001
+title: Security updates are installed automatically
+platform: linux
+category: System
+severity: medium
+rationale: >
+  Most compromises exploit vulnerabilities whose fix was already published. Automatic security
+  updates close that window without waiting for a maintenance campaign.
+references:
+  anssi: [34]
+  other:
+    - "CIS Controls v8, safeguard 7.3: Perform automated operating system patch management"
+check:
+  any:
+    - all:
+        - fact: updates.unattended_upgrades_installed
+          op: eq
+          value: true
+          missing: fail
+        - fact: updates.apt_unattended_upgrade
+          op: eq
+          value: 1
+          missing: fail
+    - fact: updates.dnf_automatic_timer_enabled
+      op: eq
+      value: true
+      missing: fail
+remediation:
+  summary: Enable unattended-upgrades (Debian/Ubuntu) or dnf-automatic with apply_updates = yes (RHEL family). If a central tool (Ansible, Satellite, Landscape, WSUS-like) patches the host, record an exception.
+  command: |
+    # Debian/Ubuntu
+    sudo apt-get install unattended-upgrades && sudo dpkg-reconfigure -plow unattended-upgrades
+    # RHEL family
+    sudo dnf install dnf-automatic && sudo systemctl enable --now dnf-automatic-install.timer
+  impact: Services may restart during updates; schedule reboots separately.

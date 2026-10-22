@@ -1,0 +1,25 @@
+id: LNX-SVC-002
+title: Unneeded network services are disabled
+platform: linux
+category: Services
+severity: medium
+rationale: >
+  Zero-configuration (Avahi), printing (CUPS), RPC, SNMP, file sharing, directory and mail services
+  listen on the network. Each one that a server does not need is attack surface for nothing.
+references:
+  cis:
+    - "Ensure avahi daemon services are not in use"
+    - "Ensure print server services are not in use"
+    - "Ensure rpcbind services are not in use"
+    - "Ensure snmp services are not in use"
+    - "Ensure samba file server services are not in use"
+    - "Ensure rsync services are not in use"
+  anssi: [14]
+check:
+  fact: services.enabled
+  op: none_of
+  value: [avahi-daemon, avahi-daemon.socket, cups, cups.socket, cups-browsed, rpcbind, rpcbind.socket, snmpd, nfs-server, smbd, nmbd, slapd, dovecot, squid, rsync, rsyncd, isc-dhcp-server, dhcpd]
+remediation:
+  summary: Disable each listed service that this server does not provide.
+  command: sudo systemctl disable --now <service>
+  impact: Disabling rpcbind breaks NFSv3 mounts; record an exception on NFS clients and file servers.

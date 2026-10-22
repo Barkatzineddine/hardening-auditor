@@ -1,0 +1,27 @@
+id: WIN-SVC-002
+title: Unneeded network services are disabled
+platform: windows
+category: Services
+severity: medium
+rationale: >
+  Services such as Remote Registry, SSDP/UPnP, Simple TCP/IP, FTP or SNMP enlarge the attack
+  surface and are rarely needed on a hardened server.
+references:
+  cis:
+    - "Ensure 'Remote Registry (RemoteRegistry)' is set to 'Disabled'"
+    - "Ensure 'SSDP Discovery (SSDPSRV)' is set to 'Disabled'"
+    - "Ensure 'UPnP Device Host (upnphost)' is set to 'Disabled'"
+    - "Ensure 'Simple TCP/IP Services (simptcp)' is set to 'Disabled' or 'Not Installed'"
+    - "Ensure 'Microsoft FTP Service (FTPSVC)' is set to 'Disabled' or 'Not Installed'"
+    - "Ensure 'SNMP Service (SNMP)' is set to 'Disabled' or 'Not Installed'"
+  anssi: [14]
+check:
+  fact: services.not_disabled
+  op: none_of
+  value: [remoteregistry, ssdpsrv, upnphost, simptcp, ftpsvc, snmp, sharedaccess, remoteaccess, rpclocator, xblgamesave, xboxnetapisvc]
+remediation:
+  summary: Disable each listed service that the server does not need.
+  command: |
+    $unneeded = 'RemoteRegistry','SSDPSRV','upnphost','simptcp','FTPSVC','SNMP','SharedAccess','RemoteAccess','RpcLocator'
+    Get-Service -Name $unneeded -ErrorAction SilentlyContinue | ForEach-Object { Stop-Service $_ -Force; Set-Service $_.Name -StartupType Disabled }
+  impact: Remote Registry is used by some monitoring and inventory tools; SNMP by legacy monitoring. Confirm with their owners first.

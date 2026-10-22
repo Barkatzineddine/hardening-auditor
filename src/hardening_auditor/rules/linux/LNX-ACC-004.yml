@@ -1,0 +1,30 @@
+id: LNX-ACC-004
+title: Accounts lock after repeated authentication failures
+platform: linux
+category: Accounts & passwords
+severity: medium
+rationale: >
+  pam_faillock locks an account after a number of failed attempts, which stops online password
+  guessing on local logins, su and SSH password authentication.
+references:
+  cis:
+    - "Ensure pam_faillock module is enabled"
+    - "Ensure password failed attempts lockout is configured"
+  anssi: [10]
+check:
+  all:
+    - fact: pam.faillock.enabled
+      op: eq
+      value: true
+    - fact: pam.faillock.deny
+      op: lte
+      value: 5
+      default: 3
+remediation:
+  summary: Enable pam_faillock (authselect enable-feature with-faillock on RHEL, pam-auth-update on Debian/Ubuntu) and set deny = 5 and unlock_time = 900 in /etc/security/faillock.conf.
+  command: |
+    # RHEL family
+    sudo authselect enable-feature with-faillock
+    # all distributions
+    printf 'deny = 5\nunlock_time = 900\n' | sudo tee -a /etc/security/faillock.conf
+  impact: Mistakes in PAM can lock everyone out; test with a second root session open.

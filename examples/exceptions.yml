@@ -1,0 +1,31 @@
+# Accepted risks: a failed control that the organisation decided to tolerate for a while.
+# Each entry needs a justification and an expiry date. Accepted controls are listed separately in
+# the report and do not count in the score; once the date has passed, they fail again.
+#
+#   rule           rule id from the catalogue (hardening-auditor rules)
+#   hosts          host name patterns (shell-style, case-insensitive); default: every host
+#   justification  why the risk is accepted and what compensates it (10 characters minimum)
+#   approved_by    who accepted the risk
+#   ticket         change or risk register reference
+#   expires        YYYY-MM-DD, last day the exception applies
+exceptions:
+  - rule: WIN-SVC-001
+    hosts: ["SRV-PRINT*"]
+    justification: Print servers need the Print Spooler. Point and Print is restricted to approved drivers by GPO.
+    approved_by: RSSI
+    ticket: RISK-2026-014
+    expires: 2027-06-30
+
+  - rule: LNX-NET-001
+    hosts: ["k8s-node-*", "docker-*"]
+    justification: Container hosts route traffic between pods; forwarding is filtered by the CNI network policies.
+    approved_by: Infrastructure lead
+    ticket: RISK-2026-021
+    expires: 2027-03-31
+
+  - rule: LNX-SSH-002
+    hosts: ["sftp-partners"]
+    justification: Partners upload files with passwords until the key migration (deadline Q1). fail2ban and an IP allow-list compensate.
+    approved_by: RSSI
+    ticket: RISK-2026-030
+    expires: 2027-01-31

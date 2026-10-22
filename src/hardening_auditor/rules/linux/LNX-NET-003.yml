@@ -1,0 +1,41 @@
+id: LNX-NET-003
+title: Spoofed and flooding packets are filtered and logged
+platform: linux
+category: Network stack
+severity: low
+rationale: >
+  Reverse path filtering drops packets with spoofed source addresses, SYN cookies keep the host
+  reachable during a SYN flood, and logging martian packets helps detect spoofing attempts.
+references:
+  cis:
+    - "Ensure reverse path filtering is enabled"
+    - "Ensure tcp syn cookies is enabled"
+    - "Ensure suspicious packets are logged"
+    - "Ensure broadcast icmp requests are ignored"
+  anssi: [19]
+check:
+  all:
+    - fact: sysctl.net.ipv4.conf.all.rp_filter
+      op: eq
+      value: 1
+    - fact: sysctl.net.ipv4.tcp_syncookies
+      op: eq
+      value: 1
+    - fact: sysctl.net.ipv4.conf.all.log_martians
+      op: eq
+      value: 1
+    - fact: sysctl.net.ipv4.icmp_echo_ignore_broadcasts
+      op: eq
+      value: 1
+remediation:
+  summary: Enable strict reverse path filtering, SYN cookies and martian logging.
+  command: |
+    sudo tee /etc/sysctl.d/60-antispoof.conf <<'CONF'
+    net.ipv4.conf.all.rp_filter = 1
+    net.ipv4.conf.default.rp_filter = 1
+    net.ipv4.tcp_syncookies = 1
+    net.ipv4.conf.all.log_martians = 1
+    net.ipv4.icmp_echo_ignore_broadcasts = 1
+    CONF
+    sudo sysctl --system
+  impact: Strict rp_filter breaks asymmetric routing (multi-homed hosts); use 2 (loose) and an exception there.

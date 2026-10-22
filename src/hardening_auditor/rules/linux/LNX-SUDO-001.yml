@@ -1,0 +1,31 @@
+id: LNX-SUDO-001
+title: sudo runs commands in a pseudo-terminal and keeps its own log
+platform: linux
+category: Privilege escalation
+severity: low
+rationale: >
+  use_pty stops a command run with sudo from injecting keystrokes into the administrator's
+  terminal after it exits. A dedicated sudo log keeps an audit trail of privileged commands.
+references:
+  cis:
+    - "Ensure sudo commands use pty"
+    - "Ensure sudo log file exists"
+  anssi: [29, 36]
+applies_if:
+  fact: sudo.installed
+  op: eq
+  value: true
+check:
+  all:
+    - fact: sudo.use_pty
+      op: eq
+      value: true
+    - fact: sudo.logfile
+      op: eq
+      value: true
+remediation:
+  summary: Add the two Defaults lines with visudo.
+  command: |
+    printf 'Defaults use_pty\nDefaults logfile="/var/log/sudo.log"\n' | sudo tee /etc/sudoers.d/10-hardening
+    sudo chmod 0440 /etc/sudoers.d/10-hardening && sudo visudo -c
+  impact: None.

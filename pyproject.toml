@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hardening-auditor"
+version = "1.0.0"
+description = "Read-only CIS Benchmark and ANSSI hygiene compliance auditor for Windows and Linux servers"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [{ name = "Mohamed Zineddine Barkat" }]
+dependencies = ["pyyaml", "jinja2"]
+classifiers = [
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: OS Independent",
+  "Topic :: Security",
+  "Topic :: System :: Systems Administration",
+]
+
+[project.scripts]
+hardening-auditor = "hardening_auditor.cli:main"
+
+[project.urls]
+Repository = "https://github.com/Barkatzineddine/hardening-auditor"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+hardening_auditor = ["rules/**/*.yml", "templates/*", "py.typed"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "PL", "PTH", "C4", "RET"]
+ignore = ["PLR2004", "PLR0911", "PLR0912", "PLR0913"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004", "S603", "S607"]
+# Status.PASS = "pass" is not a password.
+"src/hardening_auditor/models.py" = ["S105"]
+# Official titles of the ANSSI measures, kept verbatim.
+"src/hardening_auditor/references.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_decorators = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+
+[tool.coverage.run]
+source = ["hardening_auditor"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true

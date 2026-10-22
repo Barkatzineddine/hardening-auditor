@@ -1,0 +1,23 @@
+id: LNX-SVC-001
+title: No clear-text remote access or file transfer service is enabled
+platform: linux
+category: Services
+severity: high
+rationale: >
+  Telnet, rsh/rlogin, FTP, TFTP and NIS send credentials and data in clear text and have a long
+  history of vulnerabilities. SSH and SFTP replace all of them.
+references:
+  cis:
+    - "Ensure telnet server services are not in use"
+    - "Ensure ftp server services are not in use"
+    - "Ensure tftp server services are not in use"
+    - "Ensure nis server services are not in use"
+  anssi: [21]
+check:
+  fact: services.enabled
+  op: none_of
+  value: [telnet.socket, telnetd, inetd, inetutils-inetd, openbsd-inetd, xinetd, vsftpd, proftpd, pure-ftpd, tftp.socket, tftpd-hpa, atftpd, rsh.socket, rlogin.socket, rexec.socket, ypserv, ypbind, nis]
+remediation:
+  summary: Stop, disable and remove each listed service; use SSH and SFTP instead.
+  command: sudo systemctl disable --now <service>
+  impact: Clients that still use these protocols (old network equipment backing up over TFTP or FTP) need a secure alternative or an exception limited by firewall rules.

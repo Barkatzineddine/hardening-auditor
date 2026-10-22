@@ -1,0 +1,28 @@
+id: LNX-AUD-003
+title: System logs are kept persistently
+platform: linux
+category: Audit & logging
+severity: medium
+rationale: >
+  With a volatile journal and no syslog daemon, every log is lost at reboot, often exactly when an
+  incident responder needs them.
+references:
+  cis:
+    - "Ensure rsyslog service is enabled and active"
+    - "Ensure journald is configured to write logfiles to persistent disk"
+  anssi: [36]
+check:
+  any:
+    - fact: logging.rsyslog_active
+      op: eq
+      value: true
+    - fact: logging.journald_persistent
+      op: eq
+      value: true
+remediation:
+  summary: Make the journal persistent or run rsyslog, and forward logs to the central collector (Wazuh agent, rsyslog over TLS).
+  command: |
+    sudo mkdir -p /etc/systemd/journald.conf.d
+    printf '[Journal]\nStorage=persistent\n' | sudo tee /etc/systemd/journald.conf.d/50-persistent.conf
+    sudo systemctl restart systemd-journald
+  impact: Uses disk space under /var/log/journal (capped by SystemMaxUse).

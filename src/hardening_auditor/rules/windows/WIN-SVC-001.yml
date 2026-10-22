@@ -1,0 +1,28 @@
+id: WIN-SVC-001
+title: Print Spooler is disabled on servers
+platform: windows
+category: Services
+severity: high
+rationale: >
+  The Print Spooler service was behind PrintNightmare and lets any domain user coerce the server
+  into authenticating to an attacker (PrinterBug), a step towards domain compromise on domain
+  controllers.
+references:
+  cis:
+    - "Ensure 'Print Spooler (Spooler)' is set to 'Disabled' (DC only)"
+  anssi: [14]
+applies_if:
+  fact: os.product_type
+  op: in
+  value: [server, domain_controller]
+check:
+  fact: services.not_disabled
+  op: not_contains
+  value: spooler
+remediation:
+  summary: Stop and disable the Print Spooler on every server that is not a print server.
+  command: |
+    Stop-Service -Name Spooler -Force
+    Set-Service -Name Spooler -StartupType Disabled
+  gpo: Computer Configuration\Policies\Windows Settings\Security Settings\System Services\Print Spooler = Disabled
+  impact: The server can no longer print or share printers. Record an exception for print servers.

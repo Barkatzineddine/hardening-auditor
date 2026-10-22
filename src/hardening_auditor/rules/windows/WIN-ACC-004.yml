@@ -1,0 +1,34 @@
+id: WIN-ACC-004
+title: Account lockout stops online password guessing
+platform: windows
+category: Accounts & passwords
+severity: high
+rationale: >
+  Without a lockout threshold an attacker can try passwords against local accounts over SMB or
+  RDP without limit. A threshold of at most five attempts with a lockout of 15 minutes or more
+  makes brute force impractical while keeping the helpdesk load reasonable.
+references:
+  cis:
+    - "Ensure 'Account lockout threshold' is set to '5 or fewer invalid logon attempt(s), but not 0'"
+    - "Ensure 'Account lockout duration' is set to '15 or more minute(s)'"
+    - "Ensure 'Reset account lockout counter after' is set to '15 or more minute(s)'"
+  anssi: [10]
+check:
+  all:
+    - fact: policy.lockout.threshold
+      op: gte
+      value: 1
+    - fact: policy.lockout.threshold
+      op: lte
+      value: 5
+    - fact: policy.lockout.duration_minutes
+      op: gte
+      value: 15
+    - fact: policy.lockout.reset_minutes
+      op: gte
+      value: 15
+remediation:
+  summary: Lock accounts for 15 minutes after five failed attempts counted over 15 minutes.
+  gpo: Computer Configuration\Policies\Windows Settings\Security Settings\Account Policies\Account Lockout Policy
+  command: net accounts /lockoutthreshold:5 /lockoutduration:15 /lockoutwindow:15
+  impact: Password spraying can lock many accounts at once. Alert on event 4740 in the SIEM to detect it.

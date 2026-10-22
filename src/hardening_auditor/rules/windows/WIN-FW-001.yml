@@ -1,0 +1,30 @@
+id: WIN-FW-001
+title: Windows Defender Firewall is on for every profile
+platform: windows
+category: Firewall
+severity: high
+rationale: >
+  The host firewall is the last filter between a compromised neighbour and this machine's
+  services. Turning it off on one profile is enough to expose SMB, RPC and WinRM.
+references:
+  cis:
+    - "Ensure 'Windows Firewall: Domain: Firewall state' is set to 'On (recommended)'"
+    - "Ensure 'Windows Firewall: Private: Firewall state' is set to 'On (recommended)'"
+    - "Ensure 'Windows Firewall: Public: Firewall state' is set to 'On (recommended)'"
+  anssi: [17]
+check:
+  all:
+    - fact: firewall.domain.enabled
+      op: eq
+      value: true
+    - fact: firewall.private.enabled
+      op: eq
+      value: true
+    - fact: firewall.public.enabled
+      op: eq
+      value: true
+remediation:
+  summary: Turn the firewall on for the Domain, Private and Public profiles.
+  gpo: Computer Configuration\Policies\Windows Settings\Security Settings\Windows Defender Firewall with Advanced Security\Windows Defender Firewall Properties\<profile>\Firewall state = On
+  command: Set-NetFirewallProfile -Profile Domain,Private,Public -Enabled True
+  impact: Add allow rules for the services this server publishes before turning the firewall on.

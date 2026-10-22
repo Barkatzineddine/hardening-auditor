@@ -1,0 +1,242 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege by default; each job asks only for what it needs.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Third-party tools are pinned to an exact version and image digest.
+  GITLEAKS: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+  PSSCRIPTANALYZER_VERSION: "1.24.0"
+  PYTHONUTF8: "1"
+
+jobs:
+  secrets:
+    name: Secrets scan (Gitleaks)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # scan the whole history, not only the last commit
+          persist-credentials: false
+      - name: Scan git history for secrets
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" -w /repo \
+            -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/repo \
+            "$GITLEAKS" git --redact --verbose --exit-code 1 \
+            --report-format sarif --report-path gitleaks.sarif .
+      - name: Upload findings to GitHub Security
+        if: always() && hashFiles('gitleaks.sarif') != ''
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks
+
+  engine:
+    name: Engine (ruff, mypy, pytest) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install locked dependencies (hash-checked)
+        run: |
+          python -m pip install --require-hashes --no-deps -r requirements-dev.txt
+          python -m pip install --no-deps --no-build-isolation -e .
+      - name: Lint
+        run: ruff check --output-format=github .
+      - name: Formatting
+        run: ruff format --check .
+      - name: Type check (mypy --strict)
+        run: mypy
+      - name: Validate the rule catalogue and the example exceptions
+        run: hardening-auditor validate --exceptions examples/exceptions.yml
+      - name: Tests, including the real collector of this OS (coverage gate 90%)
+        run: pytest --cov --cov-report=term --cov-report=xml --junitxml=junit.xml
+      - name: Audit runtime dependencies for known vulnerabilities
+        if: runner.os == 'Linux'
+        run: pip-audit --strict --require-hashes --disable-pip -r requirements.txt
+      - name: Keep test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-${{ matrix.os }}
+          path: |
+            coverage.xml
+            junit.xml
+          retention-days: 14
+
+  shellcheck:
+    name: Linux collector lint (ShellCheck)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install ShellCheck from the hash-locked requirements
+        run: python -m pip install --require-hashes --no-deps -r requirements-dev.txt
+      - name: ShellCheck (POSIX sh)
+        run: shellcheck --version && shellcheck --shell=sh --severity=style collectors/linux/collect.sh
+
+  psscriptanalyzer:
+    name: Windows collector lint (PSScriptAnalyzer)
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install PSScriptAnalyzer ${{ env.PSSCRIPTANALYZER_VERSION }}
+        shell: pwsh
+        run: Install-Module -Name PSScriptAnalyzer -RequiredVersion $env:PSSCRIPTANALYZER_VERSION -Repository PSGallery -Scope CurrentUser -Force
+      - name: PSScriptAnalyzer (errors and warnings, Windows PowerShell 5.1 syntax)
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path collectors/windows -Recurse -Settings collectors/windows/PSScriptAnalyzerSettings.psd1
+          $results | Format-Table -AutoSize -Wrap RuleName, Severity, Line, Message
+          if ($results) { throw "PSScriptAnalyzer reported $(@($results).Count) issue(s)" }
+
+  collect-linux:
+    name: Collect and audit ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run the read-only collector as root
+        run: |
+          mkdir -p reports
+          sudo sh collectors/linux/collect.sh -o reports/facts.json
+          sudo chown "$(id -u):$(id -g)" reports/facts.json
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install the auditor (hash-checked, build backend included)
+        run: |
+          python -m pip install --require-hashes --no-deps -r requirements-dev.txt
+          python -m pip install --no-deps --no-build-isolation -e .
+      - name: Audit (fails if the collector missed facts)
+        run: |
+          hardening-auditor audit reports/facts.json --out-dir reports --ndjson reports/events.ndjson \
+            --max-unknown 0 | tee reports/summary.txt
+      - name: Job summary
+        if: always() && hashFiles('reports/summary.txt') != ''
+        run: |
+          { echo "### Hardening audit of the ${{ matrix.os }} runner"; echo '```'; cat reports/summary.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the sample report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sample-report-${{ matrix.os }}
+          path: reports/
+          retention-days: 30
+
+  collect-windows:
+    name: Collect and audit ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run the read-only collector with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $PSVersionTable.PSVersion
+          .\collectors\windows\Invoke-HardeningCollector.ps1 -OutputPath reports\facts.json
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install the auditor (hash-checked, build backend included)
+        run: |
+          python -m pip install --require-hashes --no-deps -r requirements-dev.txt
+          python -m pip install --no-deps --no-build-isolation -e .
+      - name: Audit (fails if the collector missed facts)
+        shell: bash
+        run: |
+          hardening-auditor audit reports/facts.json --out-dir reports --ndjson reports/events.ndjson \
+            --max-unknown 0 | tee reports/summary.txt
+      - name: Job summary
+        if: always() && hashFiles('reports/summary.txt') != ''
+        shell: bash
+        run: |
+          { echo "### Hardening audit of the ${{ matrix.os }} runner"; echo '```'; cat reports/summary.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the sample report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sample-report-${{ matrix.os }}
+          path: reports/
+          retention-days: 30
+
+  collector-portability:
+    name: Linux collector on ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debian 12
+            image: debian:12-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8
+          - name: Rocky Linux 9
+            image: rockylinux/rockylinux:9@sha256:8101994123cf3d0a8fee517bee7f39e555c7d92bd2d9eb3303cc988a0eeed00f
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run the collector inside the container (dash on Debian, bash on Rocky)
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          mkdir -p out && chmod 777 out
+          docker run --rm --network none -v "$PWD/collectors/linux:/collector:ro" -v "$PWD/out:/out" \
+            "$IMAGE" sh /collector/collect.sh -o /out/facts.json
+          # The collector writes its output with mode 0600 for root only.
+          sudo chown -R "$(id -u):$(id -g)" out
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Check that the output is valid and can be audited
+        run: |
+          python -m pip install --require-hashes --no-deps -r requirements-dev.txt
+          python -m pip install --no-deps --no-build-isolation -e .
+          hardening-auditor audit out/facts.json

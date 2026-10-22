@@ -1,0 +1,24 @@
+version: 2
+# Cooldown: wait a week before adopting a new release. Most malicious package versions are
+# detected and pulled within days of being published. The Python lock files are compiled with
+# the same rule (uv pip compile --exclude-newer, see requirements*.in).
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      python:
+        patterns: ["*"]

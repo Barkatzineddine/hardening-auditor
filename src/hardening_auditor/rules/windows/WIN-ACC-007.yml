@@ -1,0 +1,25 @@
+id: WIN-ACC-007
+title: Local Administrators group has at most three members
+platform: windows
+category: Accounts & passwords
+severity: medium
+rationale: >
+  Every member of the local Administrators group can dump credentials from memory and disable
+  security tools. Membership should be a short, reviewed list, ideally one domain group per
+  administration tier plus the built-in account.
+references:
+  anssi: [5, 29]
+  other:
+    - "CIS Controls v8, safeguard 5.4: Restrict administrator privileges to dedicated administrator accounts"
+applies_if:
+  fact: os.product_type
+  op: ne
+  value: domain_controller
+check:
+  fact: accounts.local_admins
+  op: max_items
+  value: 3
+remediation:
+  summary: Review the members and replace individual accounts with a dedicated, tiered admin group enforced by GPO (Restricted Groups or Group Policy Preferences).
+  command: Get-LocalGroupMember -SID S-1-5-32-544 | Select-Object Name, PrincipalSource, ObjectClass
+  impact: Removing an account from the group can break a service or task that runs with it; check services and scheduled tasks first.

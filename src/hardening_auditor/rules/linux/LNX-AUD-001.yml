@@ -1,0 +1,33 @@
+id: LNX-AUD-001
+title: auditd is running and auditing starts at boot
+platform: linux
+category: Audit & logging
+severity: medium
+rationale: >
+  The Linux audit framework records security events (authentication, privilege use, file changes)
+  that syslog does not. audit=1 on the kernel command line also covers processes that start before
+  auditd.
+references:
+  cis:
+    - "Ensure auditd service is enabled and active"
+    - "Ensure auditing for processes that start prior to auditd is enabled"
+  anssi: [36]
+check:
+  all:
+    - fact: auditd.active
+      op: eq
+      value: true
+    - fact: auditd.enabled
+      op: eq
+      value: true
+    - fact: audit.boot_param
+      op: eq
+      value: true
+remediation:
+  summary: Install auditd, enable it, and add audit=1 audit_backlog_limit=8192 to the kernel command line.
+  command: |
+    sudo apt-get install auditd || sudo dnf install audit
+    sudo systemctl enable --now auditd
+    # Debian/Ubuntu: add to GRUB_CMDLINE_LINUX in /etc/default/grub, then update-grub
+    sudo grubby --update-kernel ALL --args 'audit=1 audit_backlog_limit=8192'   # RHEL family
+  impact: The kernel parameter applies after a reboot.

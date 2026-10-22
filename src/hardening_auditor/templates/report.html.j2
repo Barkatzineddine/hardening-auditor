@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="{{ csp }}">
+<meta name="referrer" content="no-referrer">
+<title>Hardening audit · {{ audit.host.hostname }}</title>
+<style>{{ style|safe }}</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <p class="eyebrow">Hardening audit · CIS Benchmarks &amp; ANSSI hygiene guide</p>
+    <h1>{{ audit.host.hostname }}</h1>
+    <dl class="meta">
+      <div><dt>System</dt><dd>{{ audit.host.os_name or audit.host.os_family }}{% if audit.host.os_version %} ({{ audit.host.os_version }}){% endif %}</dd></div>
+      <div><dt>Collected</dt><dd>{{ audit.host.collected_at or "unknown" }}</dd></div>
+      <div><dt>Report</dt><dd>{{ audit.generated_at }}</dd></div>
+      <div><dt>Privileges</dt><dd>{% if audit.host.elevated %}administrator / root{% elif audit.host.elevated is none %}unknown{% else %}<span class="warn-text">standard user (partial collection)</span>{% endif %}</dd></div>
+      <div><dt>Catalogue</dt><dd>{{ audit.catalogue_size }} controls · hardening-auditor {{ version }}</dd></div>
+    </dl>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="overview" aria-label="Score">
+    <div class="score-card">
+      <div class="score-ring" data-score="{{ audit.overall_score if audit.overall_score is not none else 0 }}">
+        <span class="score-value">{{ audit.overall_score if audit.overall_score is not none else "n/a" }}</span>
+        <span class="score-unit">{% if audit.overall_score is not none %}/ 100{% endif %}</span>
+      </div>
+      <div>
+        <h2>Compliance score</h2>
+        <p class="muted">Severity-weighted share of passed controls (critical 4, high 3, medium 2, low 1). Accepted risks, unknown and not-applicable controls are excluded.</p>
+        <ul class="chips">
+          <li class="chip s-pass"><b>{{ counts.pass }}</b> passed</li>
+          <li class="chip s-fail"><b>{{ counts.fail }}</b> failed</li>
+          <li class="chip s-accepted"><b>{{ counts.accepted }}</b> accepted</li>
+          <li class="chip s-unknown"><b>{{ counts.unknown }}</b> unknown</li>
+          <li class="chip s-not_applicable"><b>{{ counts.not_applicable }}</b> not applicable</li>
+        </ul>
+      </div>
+    </div>
+    <div class="sev-card">
+      <h2>Open findings by severity</h2>
+      <ul class="sev-list">
+        {% for sev in severities %}
+        <li><span class="badge sev-{{ sev }}">{{ sev }}</span><b>{{ severity_counts[sev] }}</b></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  {% if audit.warnings or audit.expired_exceptions or audit.unused_exceptions or (audit.host.elevated is false) %}
+  <section class="notice" aria-label="Warnings">
+    <h2>Warnings</h2>
+    <ul>
+      {% if audit.host.elevated is false %}<li>The collector did not run with administrator/root rights: some facts could not be read and the related controls are reported as unknown.</li>{% endif %}
+      {% for risk in audit.expired_exceptions %}<li>Exception for <b>{{ risk.rule_id }}</b> expired on {{ risk.expires }}: the control counts as failed again.</li>{% endfor %}
+      {% for risk in audit.unused_exceptions %}<li>Exception for <b>{{ risk.rule_id }}</b> is no longer needed: the control does not fail on this host. Remove it from the exceptions file.</li>{% endfor %}
+      {% for warning in audit.warnings %}<li>Collector: {{ warning }}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <section aria-labelledby="cat-title">
+    <h2 id="cat-title">Score by category</h2>
+    <div class="cat-grid">
+      {% for cat in audit.categories %}
+      <button type="button" class="cat" data-category="{{ cat.name }}" title="Show the controls of this category">
+        <span class="cat-head"><span>{{ cat.name }}</span><b>{{ cat.score if cat.score is not none else "n/a" }}</b></span>
+        <span class="bar"><span class="bar-fill {{ 'good' if (cat.score or 0) >= 80 else ('warn' if (cat.score or 0) >= 50 else 'bad') }}" data-score="{{ cat.score if cat.score is not none else 0 }}"></span></span>
+        <span class="cat-counts">{{ cat.passed }} pass · {{ cat.failed }} fail{% if cat.accepted %} · {{ cat.accepted }} accepted{% endif %}{% if cat.unknown %} · {{ cat.unknown }} unknown{% endif %}{% if cat.not_applicable %} · {{ cat.not_applicable }} n/a{% endif %}</span>
+      </button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section aria-labelledby="failed-title">
+    <h2 id="failed-title">Failed controls <span class="count">{{ failed|length }}</span></h2>
+    {% if not failed %}<p class="muted">No failed control.</p>{% endif %}
+    {% for r in failed %}
+    <details class="finding">
+      <summary>
+        <span class="badge sev-{{ r.rule.severity.value }}">{{ r.rule.severity.value }}</span>
+        <code class="rid">{{ r.rule.id }}</code>
+        <span class="ftitle">{{ r.rule.title }}</span>
+        <span class="fcat">{{ r.rule.category }}</span>
+      </summary>
+      {% include "finding.html.j2" %}
+    </details>
+    {% endfor %}
+  </section>
+
+  {% if accepted %}
+  <section aria-labelledby="accepted-title">
+    <h2 id="accepted-title">Accepted risks <span class="count">{{ accepted|length }}</span></h2>
+    <p class="muted">These controls fail, but an exception with a justification and an expiry date covers them. They do not count in the score.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Control</th><th>Severity</th><th>Justification</th><th>Approved by</th><th>Ticket</th><th>Expires</th></tr></thead>
+        <tbody>
+        {% for r in accepted %}
+          <tr>
+            <td><code>{{ r.rule.id }}</code> {{ r.rule.title }}</td>
+            <td><span class="badge sev-{{ r.rule.severity.value }}">{{ r.rule.severity.value }}</span></td>
+            <td>{{ r.exception.justification }}</td>
+            <td>{{ r.exception.approved_by or "–" }}</td>
+            <td class="nowrap">{{ r.exception.ticket or "–" }}</td>
+            <td class="nowrap">{{ r.exception.expires }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <section aria-labelledby="all-title">
+    <h2 id="all-title">All controls <span class="count" id="visible-count">{{ audit.results|length }}</span></h2>
+    <form class="filters" id="filters" role="search">
+      <label>Search <input type="search" id="f-text" placeholder="ID, title, fact…" autocomplete="off"></label>
+      <label>Status
+        <select id="f-status"><option value="">All</option>{% for s in statuses %}<option value="{{ s }}">{{ s|replace("_", " ") }}</option>{% endfor %}</select>
+      </label>
+      <label>Severity
+        <select id="f-severity"><option value="">All</option>{% for s in severities %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
+      </label>
+      <label>Category
+        <select id="f-category"><option value="">All</option>{% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}</select>
+      </label>
+      <button type="reset" class="reset">Reset</button>
+    </form>
+    <div class="table-wrap">
+      <table class="controls" id="controls">
+        <thead><tr><th>ID</th><th>Control</th><th>Category</th><th>Severity</th><th>Status</th><th>Observed</th></tr></thead>
+        <tbody>
+        {% for r in audit.results %}
+          <tr data-status="{{ r.status.value }}" data-severity="{{ r.rule.severity.value }}" data-category="{{ r.rule.category }}">
+            <td><code>{{ r.rule.id }}</code></td>
+            <td>
+              <details class="row-details">
+                <summary>{{ r.rule.title }}</summary>
+                {% include "finding.html.j2" %}
+              </details>
+            </td>
+            <td>{{ r.rule.category }}</td>
+            <td><span class="badge sev-{{ r.rule.severity.value }}">{{ r.rule.severity.value }}</span></td>
+            <td><span class="status s-{{ r.status.value }}">{{ r.status.value|replace("_", " ") }}</span></td>
+            <td class="observed">{{ r.reason or "–" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  <p>Generated offline by hardening-auditor {{ version }}. This page loads no external resource. CIS references are recommendation titles from the CIS Benchmarks; ANSSI references are measures of the {{ anssi_guide }}.</p>
+</footer>
+<script>{{ script|safe }}</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+id: LNX-SSH-002
+title: SSH password authentication is disabled
+platform: linux
+category: SSH
+severity: medium
+rationale: >
+  With keys or certificates only, password guessing and credential stuffing against SSH become
+  useless. ANSSI recommends strong authentication for administration access.
+references:
+  anssi: [13]
+  other:
+    - "ANSSI, Recommandations pour un usage sécurisé d'(Open)SSH: prefer public key authentication"
+applies_if:
+  fact: ssh.installed
+  op: eq
+  value: true
+check:
+  fact: ssh.passwordauthentication
+  op: eq
+  value: "no"
+remediation:
+  summary: Deploy SSH keys (or SSH certificates) for every user, then set PasswordAuthentication no and KbdInteractiveAuthentication no.
+  command: |
+    printf 'PasswordAuthentication no\nKbdInteractiveAuthentication no\n' | sudo tee /etc/ssh/sshd_config.d/20-keys-only.conf
+    sudo sshd -t && sudo systemctl reload ssh 2>/dev/null || sudo systemctl reload sshd
+  impact: Users without a key are locked out of SSH. Keep console access ready.

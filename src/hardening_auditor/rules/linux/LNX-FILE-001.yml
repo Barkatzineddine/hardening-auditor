@@ -1,0 +1,30 @@
+id: LNX-FILE-001
+title: /etc/passwd and /etc/group are owned by root and not writable by others
+platform: linux
+category: File permissions
+severity: medium
+rationale: >
+  Anyone able to write to these files can create a root account or add themselves to a privileged group.
+references:
+  cis:
+    - "Ensure permissions on /etc/passwd are configured"
+    - "Ensure permissions on /etc/group are configured"
+  anssi: [9]
+check:
+  all:
+    - fact: files./etc/passwd.mode
+      op: mode_at_most
+      value: "0644"
+    - fact: files./etc/passwd.owner
+      op: eq
+      value: root
+    - fact: files./etc/group.mode
+      op: mode_at_most
+      value: "0644"
+    - fact: files./etc/group.owner
+      op: eq
+      value: root
+remediation:
+  summary: Reset owner and mode.
+  command: sudo chown root:root /etc/passwd /etc/group && sudo chmod 0644 /etc/passwd /etc/group
+  impact: None.
