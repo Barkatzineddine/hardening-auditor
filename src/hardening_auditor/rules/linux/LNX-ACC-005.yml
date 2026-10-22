@@ -1,0 +1,19 @@
+id: LNX-ACC-005
+title: PAM does not accept empty passwords
+platform: linux
+category: Accounts & passwords
+severity: high
+rationale: >
+  The nullok option of pam_unix lets accounts with an empty password authenticate.
+references:
+  cis:
+    - "Ensure pam_unix does not include nullok"
+  anssi: [10]
+check:
+  fact: pam.nullok
+  op: eq
+  value: false
+remediation:
+  summary: Remove nullok from the pam_unix lines (authselect select <profile> without-nullok on RHEL; edit /etc/pam.d/common-auth or use pam-auth-update on Debian/Ubuntu).
+  command: sudo grep -rn 'nullok' /etc/pam.d/
+  impact: Accounts that really have an empty password can no longer log in (they should not exist, see LNX-ACC-007).

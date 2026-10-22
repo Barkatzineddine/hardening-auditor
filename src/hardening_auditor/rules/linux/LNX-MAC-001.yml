@@ -1,0 +1,33 @@
+id: LNX-MAC-001
+title: A mandatory access control system is enforcing
+platform: linux
+category: System
+severity: medium
+rationale: >
+  SELinux or AppArmor confine services to what they need, so a compromised daemon cannot read or
+  modify the rest of the system.
+references:
+  cis:
+    - "Ensure the SELinux mode is enforcing"
+    - "Ensure all AppArmor Profiles are enforcing"
+  anssi: [14]
+check:
+  any:
+    - fact: mac.selinux
+      op: eq
+      value: enforcing
+    - all:
+        - fact: mac.apparmor_enabled
+          op: eq
+          value: true
+        - fact: mac.apparmor_enforced_profiles
+          op: gte
+          value: 1
+remediation:
+  summary: Keep SELinux enforcing (RHEL family) or AppArmor enabled with profiles in enforce mode (Debian/Ubuntu).
+  command: |
+    # RHEL family
+    sudo setenforce 1 && sudo sed -i 's/^SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
+    # Debian/Ubuntu
+    sudo aa-status
+  impact: Applications without a policy may need one; use permissive or complain mode to build it.

@@ -1,0 +1,29 @@
+id: LNX-FILE-004
+title: Bootloader configuration is readable by root only
+platform: linux
+category: File permissions
+severity: low
+rationale: >
+  The GRUB configuration can contain the bootloader password hash and reveals kernel parameters.
+  Write access would allow disabling security features at the next boot.
+references:
+  cis:
+    - "Ensure permissions on bootloader config are configured"
+  anssi: [9]
+applies_if:
+  fact: files.bootloader_cfg.mode
+  op: exists
+check:
+  all:
+    - fact: files.bootloader_cfg.mode
+      op: mode_at_most
+      value: "0600"
+    - fact: files.bootloader_cfg.owner
+      op: eq
+      value: root
+remediation:
+  summary: Reset owner and mode of grub.cfg.
+  command: |
+    sudo chown root:root /boot/grub/grub.cfg 2>/dev/null || sudo chown root:root /boot/grub2/grub.cfg
+    sudo chmod 0600 /boot/grub/grub.cfg 2>/dev/null || sudo chmod 0600 /boot/grub2/grub.cfg
+  impact: update-grub may reset the mode; re-check after kernel updates.

@@ -1,0 +1,25 @@
+id: WIN-ACC-002
+title: Password complexity is enforced and passwords are not stored reversibly
+platform: windows
+category: Accounts & passwords
+severity: high
+rationale: >
+  Complexity rules remove the most guessable passwords. Reversible encryption stores passwords
+  in a form equivalent to clear text, so anyone able to read the account database recovers them.
+references:
+  cis:
+    - "Ensure 'Password must meet complexity requirements' is set to 'Enabled'"
+    - "Ensure 'Store passwords using reversible encryption' is set to 'Disabled'"
+  anssi: [10, 11]
+check:
+  all:
+    - fact: policy.password.complexity
+      op: eq
+      value: 1
+    - fact: policy.password.reversible_encryption
+      op: eq
+      value: 0
+remediation:
+  summary: Enable password complexity and disable reversible encryption in the password policy.
+  gpo: Computer Configuration\Policies\Windows Settings\Security Settings\Account Policies\Password Policy\Password must meet complexity requirements = Enabled; Store passwords using reversible encryption = Disabled
+  impact: Reversible encryption is only needed by CHAP or Digest authentication; check that no such application remains before disabling it.

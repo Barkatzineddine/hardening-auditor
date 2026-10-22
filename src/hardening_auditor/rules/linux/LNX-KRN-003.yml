@@ -1,0 +1,30 @@
+id: LNX-KRN-003
+title: Core dumps of privileged programs and unsafe links are blocked
+platform: linux
+category: Kernel
+severity: medium
+rationale: >
+  A core dump of a setuid program can leak password hashes or keys. Protected hard and symbolic
+  links block the classic /tmp race attacks used for privilege escalation.
+references:
+  cis:
+    - "Ensure core dumps are restricted"
+  anssi: [14]
+check:
+  all:
+    - fact: sysctl.fs.suid_dumpable
+      op: eq
+      value: 0
+    - fact: sysctl.fs.protected_hardlinks
+      op: eq
+      value: 1
+    - fact: sysctl.fs.protected_symlinks
+      op: eq
+      value: 1
+remediation:
+  summary: Disable setuid core dumps and enable link protections.
+  command: |
+    printf 'fs.suid_dumpable = 0\nfs.protected_hardlinks = 1\nfs.protected_symlinks = 1\n' | sudo tee /etc/sysctl.d/60-fs.conf
+    echo '* hard core 0' | sudo tee /etc/security/limits.d/60-core.conf
+    sudo sysctl --system
+  impact: Crash dumps of setuid programs are no longer available for debugging.

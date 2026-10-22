@@ -1,0 +1,21 @@
+id: WIN-AUD-006
+title: Security event log can hold at least 192 MB
+platform: windows
+category: Audit & logging
+severity: low
+rationale: >
+  The default 20 MB Security log wraps within hours on a busy server, destroying the evidence an
+  incident responder needs, especially if forwarding to the SIEM is interrupted.
+references:
+  cis:
+    - "Ensure 'Security: Specify the maximum log file size (KB)' is set to 'Enabled: 196,608 or greater'"
+  anssi: [36]
+check:
+  fact: eventlog.security.max_size_kb
+  op: gte
+  value: 196608
+remediation:
+  summary: Raise the maximum size of the Security log to 196,608 KB or more.
+  gpo: Computer Configuration\Policies\Administrative Templates\Windows Components\Event Log Service\Security\Specify the maximum log file size (KB) = 196608
+  command: wevtutil sl Security /ms:201326592
+  impact: Uses up to 192 MB of disk on the system volume.

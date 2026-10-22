@@ -1,0 +1,33 @@
+id: WIN-AUD-002
+title: Logon, special logon and account lockout events are audited
+platform: windows
+category: Audit & logging
+severity: medium
+rationale: >
+  Logon events (4624, 4625), special logons (4672, privileged sessions) and lockouts (4740) are the
+  backbone of any SOC detection on Windows: lateral movement, brute force and admin activity.
+references:
+  cis:
+    - "Ensure 'Audit Logon' is set to 'Success and Failure'"
+    - "Ensure 'Audit Special Logon' is set to include 'Success'"
+    - "Ensure 'Audit Account Lockout' is set to include 'Failure'"
+  anssi: [36]
+check:
+  all:
+    - fact: audit.logon
+      op: eq
+      value: success_and_failure
+    - fact: audit.special_logon
+      op: in
+      value: [success, success_and_failure]
+    - fact: audit.account_lockout
+      op: in
+      value: [failure, success_and_failure]
+remediation:
+  summary: Audit Logon (success and failure), Special Logon (success) and Account Lockout (failure).
+  gpo: Computer Configuration\Policies\Windows Settings\Security Settings\Advanced Audit Policy Configuration\Audit Policies\Logon/Logoff
+  command: |
+    auditpol /set /subcategory:"{0CCE9215-69AE-11D9-BED3-505054503030}" /success:enable /failure:enable
+    auditpol /set /subcategory:"{0CCE921B-69AE-11D9-BED3-505054503030}" /success:enable
+    auditpol /set /subcategory:"{0CCE9217-69AE-11D9-BED3-505054503030}" /failure:enable
+  impact: Logon events are the largest share of the Security log; check retention.

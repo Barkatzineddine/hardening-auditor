@@ -1,0 +1,20 @@
+id: LNX-ACC-007
+title: No account has an empty password
+platform: linux
+category: Accounts & passwords
+severity: critical
+rationale: >
+  An account with an empty password field in /etc/shadow can be used by anyone through any
+  service that accepts passwords.
+references:
+  cis:
+    - "Ensure /etc/shadow password fields are not empty"
+  anssi: [10, 12]
+check:
+  fact: accounts.empty_password
+  op: max_items
+  value: 0
+remediation:
+  summary: Lock each listed account or set a password.
+  command: sudo passwd -l <user>
+  impact: None for legitimate service accounts, which should be locked anyway.

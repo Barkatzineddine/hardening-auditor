@@ -1,0 +1,26 @@
+id: LNX-FW-001
+title: A host firewall is active
+platform: linux
+category: Firewall
+severity: high
+rationale: >
+  A host firewall (nftables, firewalld, ufw or iptables) limits which services are reachable,
+  including those started later by mistake.
+references:
+  cis:
+    - "Ensure ufw service is enabled"
+    - "Ensure firewalld service enabled and running"
+    - "Ensure nftables service is enabled"
+  anssi: [17, 19]
+check:
+  fact: firewall.active
+  op: eq
+  value: true
+remediation:
+  summary: Enable the distribution's firewall with a default-deny inbound policy and explicit allow rules.
+  command: |
+    # Debian/Ubuntu
+    sudo ufw default deny incoming && sudo ufw allow OpenSSH && sudo ufw enable
+    # RHEL family
+    sudo systemctl enable --now firewalld
+  impact: Allow SSH before enabling the firewall remotely, or you lose access.

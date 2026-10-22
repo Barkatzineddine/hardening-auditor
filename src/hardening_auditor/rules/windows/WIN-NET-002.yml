@@ -1,0 +1,22 @@
+id: WIN-NET-002
+title: SMB client requires message signing
+platform: windows
+category: Network protocols
+severity: medium
+rationale: >
+  A client that does not require signing can be tricked into talking to a rogue or relayed server
+  and accept tampered responses, for example a malicious Group Policy file.
+references:
+  cis:
+    - "Ensure 'Microsoft network client: Digitally sign communications (always)' is set to 'Enabled'"
+  anssi: [21]
+check:
+  fact: smb.client.require_signing
+  op: eq
+  value: 1
+  default: 0
+remediation:
+  summary: Require SMB signing on the client side.
+  gpo: 'Computer Configuration\Policies\Windows Settings\Security Settings\Local Policies\Security Options\Microsoft network client: Digitally sign communications (always) = Enabled'
+  command: Set-SmbClientConfiguration -RequireSecuritySignature $true -Force
+  impact: Connections to servers that cannot sign will fail; inventory them first.

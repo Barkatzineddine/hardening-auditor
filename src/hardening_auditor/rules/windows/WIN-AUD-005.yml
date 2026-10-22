@@ -1,0 +1,29 @@
+id: WIN-AUD-005
+title: Audit policy changes are audited and subcategories are enforced
+platform: windows
+category: Audit & logging
+severity: medium
+rationale: >
+  Attackers disable auditing before acting (event 4719). Forcing subcategory settings ensures the
+  advanced audit policy is not silently overridden by legacy category settings.
+references:
+  cis:
+    - "Ensure 'Audit Audit Policy Change' is set to include 'Success'"
+    - "Ensure 'Audit: Force audit policy subcategory settings (Windows Vista or later) to override audit policy category settings' is set to 'Enabled'"
+  anssi: [36]
+check:
+  all:
+    - fact: audit.audit_policy_change
+      op: in
+      value: [success, success_and_failure]
+    - fact: lsa.sce_no_apply_legacy_audit_policy
+      op: eq
+      value: 1
+      default: 1
+remediation:
+  summary: Audit Audit Policy Change and force subcategory settings.
+  gpo: 'Computer Configuration\Policies\Windows Settings\Security Settings\Local Policies\Security Options\Audit: Force audit policy subcategory settings = Enabled'
+  command: |
+    auditpol /set /subcategory:"{0CCE922F-69AE-11D9-BED3-505054503030}" /success:enable
+    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name SCENoApplyLegacyAuditPolicy -Value 1 -Type DWord
+  impact: None.

@@ -1,0 +1,39 @@
+id: LNX-FILE-002
+title: /etc/shadow and /etc/gshadow are not readable by users
+platform: linux
+category: File permissions
+severity: high
+rationale: >
+  The shadow files contain password hashes. Read access lets any user crack them offline.
+references:
+  cis:
+    - "Ensure permissions on /etc/shadow are configured"
+    - "Ensure permissions on /etc/gshadow are configured"
+  anssi: [9, 11]
+check:
+  all:
+    - fact: files./etc/shadow.mode
+      op: mode_at_most
+      value: "0640"
+    - fact: files./etc/shadow.owner
+      op: eq
+      value: root
+    - fact: files./etc/shadow.group
+      op: in
+      value: [root, shadow]
+    - fact: files./etc/gshadow.mode
+      op: mode_at_most
+      value: "0640"
+      missing: pass
+    - fact: files./etc/gshadow.owner
+      op: eq
+      value: root
+      missing: pass
+remediation:
+  summary: Reset owner and mode (group shadow on Debian/Ubuntu, root with mode 0000 on RHEL).
+  command: |
+    # Debian/Ubuntu
+    sudo chown root:shadow /etc/shadow /etc/gshadow && sudo chmod 0640 /etc/shadow /etc/gshadow
+    # RHEL family
+    sudo chown root:root /etc/shadow /etc/gshadow && sudo chmod 0000 /etc/shadow /etc/gshadow
+  impact: None.

@@ -1,0 +1,33 @@
+id: LNX-SSH-006
+title: SSH disables X11 forwarding and host-based trust
+platform: linux
+category: SSH
+severity: medium
+rationale: >
+  X11 forwarding lets a compromised server reach the administrator's desktop. Host-based
+  authentication and rhosts files trust whole machines instead of users.
+references:
+  cis:
+    - "Ensure sshd X11Forwarding is disabled"
+    - "Ensure sshd HostbasedAuthentication is disabled"
+    - "Ensure sshd IgnoreRhosts is enabled"
+  anssi: [21]
+applies_if:
+  fact: ssh.installed
+  op: eq
+  value: true
+check:
+  all:
+    - fact: ssh.x11forwarding
+      op: eq
+      value: "no"
+    - fact: ssh.hostbasedauthentication
+      op: eq
+      value: "no"
+    - fact: ssh.ignorerhosts
+      op: eq
+      value: "yes"
+remediation:
+  summary: Set X11Forwarding no, HostbasedAuthentication no and IgnoreRhosts yes.
+  command: printf 'X11Forwarding no\nHostbasedAuthentication no\nIgnoreRhosts yes\n' | sudo tee /etc/ssh/sshd_config.d/40-trust.conf
+  impact: Graphical applications can no longer be forwarded over SSH.

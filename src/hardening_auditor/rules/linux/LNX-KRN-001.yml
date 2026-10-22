@@ -1,0 +1,20 @@
+id: LNX-KRN-001
+title: Address space layout randomisation is fully enabled
+platform: linux
+category: Kernel
+severity: medium
+rationale: >
+  Full ASLR (randomize_va_space = 2) randomises the stack, heap, libraries and VDSO, which makes
+  memory corruption exploits much harder to write reliably.
+references:
+  cis:
+    - "Ensure address space layout randomization is enabled"
+  anssi: [14]
+check:
+  fact: sysctl.kernel.randomize_va_space
+  op: eq
+  value: 2
+remediation:
+  summary: Set kernel.randomize_va_space = 2 in /etc/sysctl.d.
+  command: echo 'kernel.randomize_va_space = 2' | sudo tee /etc/sysctl.d/60-hardening.conf && sudo sysctl --system
+  impact: None.

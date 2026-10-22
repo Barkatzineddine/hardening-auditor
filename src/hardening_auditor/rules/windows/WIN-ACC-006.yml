@@ -1,0 +1,25 @@
+id: WIN-ACC-006
+title: Built-in Administrator account is disabled
+platform: windows
+category: Accounts & passwords
+severity: medium
+rationale: >
+  The built-in Administrator (RID 500) has a well-known SID, is never locked out, and is the
+  first target of password guessing and of pass-the-hash between machines that share its password.
+references:
+  cis:
+    - "Ensure 'Accounts: Administrator account status' is set to 'Disabled' (MS only)"
+  anssi: [5, 8]
+applies_if:
+  fact: os.product_type
+  op: ne
+  value: domain_controller
+check:
+  fact: policy.accounts.admin_enabled
+  op: eq
+  value: 0
+remediation:
+  summary: Administer the machine with named accounts, then disable the built-in Administrator.
+  gpo: 'Computer Configuration\Policies\Windows Settings\Security Settings\Local Policies\Security Options\Accounts: Administrator account status = Disabled'
+  command: Get-LocalUser | Where-Object { $_.SID -like 'S-1-5-*-500' } | Disable-LocalUser
+  impact: Check first that another administrator account works. If LAPS manages this account, keep it enabled and record an exception.

@@ -1,0 +1,22 @@
+id: WIN-AUTH-002
+title: WDigest does not keep clear-text credentials in memory
+platform: windows
+category: Authentication
+severity: high
+rationale: >
+  With WDigest credential caching on, LSASS keeps the user's password in clear text, ready for
+  Mimikatz. Attackers often switch it back on, so the value should be set explicitly and monitored.
+references:
+  cis:
+    - "Ensure 'WDigest Authentication' is set to 'Disabled'"
+  anssi: [11]
+check:
+  fact: wdigest.use_logon_credential
+  op: eq
+  value: 0
+  default: 0
+remediation:
+  summary: Set UseLogonCredential to 0, and alert in the SIEM when the value changes.
+  gpo: Computer Configuration\Policies\Administrative Templates\MS Security Guide\WDigest Authentication = Disabled
+  command: Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\WDigest' -Name UseLogonCredential -Value 0 -Type DWord
+  impact: None on supported Windows versions; only legacy HTTP Digest applications need it.

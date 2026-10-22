@@ -1,0 +1,35 @@
+id: WIN-NET-003
+title: SMBv1 is disabled on the server and the client
+platform: windows
+category: Network protocols
+severity: high
+rationale: >
+  SMBv1 has no pre-authentication integrity, no encryption, and was the vector of WannaCry and
+  NotPetya (EternalBlue). No supported Windows version needs it.
+references:
+  cis:
+    - "Ensure 'Configure SMB v1 server' is set to 'Disabled'"
+    - "Ensure 'Configure SMB v1 client driver' is set to 'Enabled: Disable driver (recommended)'"
+  anssi: [21, 35]
+check:
+  all:
+    - fact: smb.server.smb1_enabled
+      op: eq
+      value: false
+    - any:
+        - fact: smb.client.smb1_driver_present
+          op: eq
+          value: false
+        - fact: smb.client.smb1_driver_start
+          op: eq
+          value: 4
+remediation:
+  summary: Disable the SMBv1 server and remove the SMBv1 client feature.
+  command: |
+    Set-SmbServerConfiguration -EnableSMB1Protocol $false -Force
+    # Windows Server
+    Uninstall-WindowsFeature -Name FS-SMB1
+    # Windows 10/11
+    Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
+  gpo: Computer Configuration\Policies\Administrative Templates\MS Security Guide\Configure SMB v1 server = Disabled; Configure SMB v1 client driver = Disable driver
+  impact: Very old devices (Windows XP, old copiers and NAS) lose access. Enable SMB1 auditing first (Set-SmbServerConfiguration -AuditSmb1Access $true, event 3000) to find them.

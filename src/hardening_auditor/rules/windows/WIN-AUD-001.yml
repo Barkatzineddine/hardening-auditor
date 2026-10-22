@@ -1,0 +1,21 @@
+id: WIN-AUD-001
+title: Credential validation is audited (success and failure)
+platform: windows
+category: Audit & logging
+severity: medium
+rationale: >
+  Credential validation events (4776) record NTLM authentications checked by this machine. They are
+  needed to detect password spraying, brute force and pass-the-hash.
+references:
+  cis:
+    - "Ensure 'Audit Credential Validation' is set to 'Success and Failure'"
+  anssi: [36]
+check:
+  fact: audit.credential_validation
+  op: eq
+  value: success_and_failure
+remediation:
+  summary: Audit Credential Validation for success and failure. The GUID form of auditpol works on every Windows language.
+  gpo: Computer Configuration\Policies\Windows Settings\Security Settings\Advanced Audit Policy Configuration\Audit Policies\Account Logon\Audit Credential Validation = Success and Failure
+  command: auditpol /set /subcategory:"{0CCE923F-69AE-11D9-BED3-505054503030}" /success:enable /failure:enable
+  impact: Moderate log volume on domain controllers; size the Security log and forward it to the SIEM.

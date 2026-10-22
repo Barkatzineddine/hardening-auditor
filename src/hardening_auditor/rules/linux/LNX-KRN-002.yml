@@ -1,0 +1,32 @@
+id: LNX-KRN-002
+title: Kernel pointers, kernel logs and ptrace are restricted
+platform: linux
+category: Kernel
+severity: medium
+rationale: >
+  Exposed kernel addresses and kernel logs help attackers defeat KASLR, and unrestricted ptrace lets
+  any process of a user read the memory of the user's other processes (SSH agent, browsers).
+references:
+  cis:
+    - "Ensure ptrace_scope is restricted"
+  anssi: [14]
+  other:
+    - "ANSSI, Recommandations de configuration d'un système GNU/Linux: kernel.kptr_restrict and kernel.dmesg_restrict"
+check:
+  all:
+    - fact: sysctl.kernel.yama.ptrace_scope
+      op: gte
+      value: 1
+      missing: fail
+    - fact: sysctl.kernel.kptr_restrict
+      op: gte
+      value: 1
+    - fact: sysctl.kernel.dmesg_restrict
+      op: eq
+      value: 1
+remediation:
+  summary: Restrict ptrace to parent processes and hide kernel pointers and logs from unprivileged users.
+  command: |
+    printf 'kernel.yama.ptrace_scope = 1\nkernel.kptr_restrict = 1\nkernel.dmesg_restrict = 1\n' | sudo tee /etc/sysctl.d/60-kernel-info.conf
+    sudo sysctl --system
+  impact: Debuggers can only attach to their own child processes unless run as root.

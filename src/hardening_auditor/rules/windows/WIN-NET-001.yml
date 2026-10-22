@@ -1,0 +1,22 @@
+id: WIN-NET-001
+title: SMB server requires message signing
+platform: windows
+category: Network protocols
+severity: high
+rationale: >
+  Without mandatory signing, an attacker in a man-in-the-middle position can relay captured NTLM
+  authentications to this server (NTLM relay) or tamper with SMB traffic.
+references:
+  cis:
+    - "Ensure 'Microsoft network server: Digitally sign communications (always)' is set to 'Enabled'"
+  anssi: [21]
+check:
+  fact: smb.server.require_signing
+  op: eq
+  value: 1
+  default: 0
+remediation:
+  summary: Require SMB signing on the server side.
+  gpo: 'Computer Configuration\Policies\Windows Settings\Security Settings\Local Policies\Security Options\Microsoft network server: Digitally sign communications (always) = Enabled'
+  command: Set-SmbServerConfiguration -RequireSecuritySignature $true -Force
+  impact: Clients that cannot sign (old NAS, printers with scan-to-folder, embedded devices) will fail to connect. Small CPU cost on high-throughput file servers.

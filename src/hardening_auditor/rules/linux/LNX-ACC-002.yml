@@ -1,0 +1,19 @@
+id: LNX-ACC-002
+title: Passwords are hashed with SHA-512 or yescrypt
+platform: linux
+category: Accounts & passwords
+severity: medium
+rationale: >
+  MD5 or DES crypt hashes in /etc/shadow are cracked in seconds once the file leaks.
+references:
+  cis:
+    - "Ensure strong password hashing algorithm is configured"
+  anssi: [11]
+check:
+  fact: login_defs.encrypt_method
+  op: in
+  value: [SHA512, YESCRYPT]
+remediation:
+  summary: Set ENCRYPT_METHOD SHA512 (or YESCRYPT) in /etc/login.defs and make sure pam_unix uses the same algorithm. Existing hashes change at the next password change.
+  command: sudo sed -i -E 's/^#?\s*ENCRYPT_METHOD.*/ENCRYPT_METHOD YESCRYPT/' /etc/login.defs
+  impact: None.

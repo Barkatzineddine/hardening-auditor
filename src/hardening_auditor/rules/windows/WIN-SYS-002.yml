@@ -1,0 +1,20 @@
+id: WIN-SYS-002
+title: Security updates were installed in the last 45 days
+platform: windows
+category: System
+severity: high
+rationale: >
+  Microsoft publishes security fixes every month. A machine without an update for more than 45
+  days has missed at least one Patch Tuesday and is exposed to published exploits.
+references:
+  anssi: [34]
+  other:
+    - "CIS Controls v8, safeguard 7.3: Perform automated operating system patch management"
+check:
+  fact: updates.days_since_last_hotfix
+  op: lte
+  value: 45
+remediation:
+  summary: Install the latest cumulative update through WSUS, Windows Update for Business or your patch tool, and check that the machine reports to it.
+  command: Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 5 HotFixID, Description, InstalledOn
+  impact: Requires a reboot window.

@@ -1,0 +1,22 @@
+id: LNX-ACC-003
+title: Password quality requires at least 14 characters
+platform: linux
+category: Accounts & passwords
+severity: medium
+rationale: >
+  pam_pwquality rejects short passwords when users change them. Without it, any length is accepted.
+references:
+  cis:
+    - "Ensure password length is configured"
+  anssi: [10]
+check:
+  fact: pam.pwquality.minlen
+  op: gte
+  value: 14
+  missing: fail
+remediation:
+  summary: Install libpam-pwquality (Debian/Ubuntu) or check libpwquality (RHEL) and set minlen = 14.
+  command: |
+    sudo mkdir -p /etc/security/pwquality.conf.d
+    echo 'minlen = 14' | sudo tee /etc/security/pwquality.conf.d/50-hardening.conf
+  impact: Applies at the next password change.

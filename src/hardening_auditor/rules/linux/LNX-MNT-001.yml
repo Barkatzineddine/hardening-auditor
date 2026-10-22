@@ -1,0 +1,35 @@
+id: LNX-MNT-001
+title: /tmp and /dev/shm are mounted nodev, nosuid and noexec
+platform: linux
+category: System
+severity: low
+rationale: >
+  World-writable temporary directories are where attackers drop and run their tools. A separate
+  /tmp with nodev, nosuid and noexec blocks running binaries and setuid tricks from there.
+references:
+  cis:
+    - "Ensure /tmp is a separate partition"
+    - "Ensure nodev option set on /tmp partition"
+    - "Ensure nosuid option set on /tmp partition"
+    - "Ensure noexec option set on /tmp partition"
+    - "Ensure noexec option set on /dev/shm partition"
+  anssi: [14]
+check:
+  all:
+    - fact: mounts.tmp.separate
+      op: eq
+      value: true
+    - fact: mounts.tmp.options
+      op: contains_all
+      value: [nodev, nosuid, noexec]
+      missing: fail
+    - fact: mounts.dev_shm.options
+      op: contains_all
+      value: [nodev, nosuid, noexec]
+remediation:
+  summary: Mount /tmp as tmpfs (or a dedicated partition) and /dev/shm with nodev,nosuid,noexec.
+  command: |
+    sudo systemctl enable tmp.mount   # tmpfs /tmp on systemd distributions
+    echo 'tmpfs /dev/shm tmpfs defaults,nodev,nosuid,noexec 0 0' | sudo tee -a /etc/fstab
+    sudo mount -o remount /dev/shm
+  impact: Some installers run scripts from /tmp; point them to another TMPDIR.

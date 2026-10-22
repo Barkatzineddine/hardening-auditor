@@ -1,0 +1,31 @@
+id: WIN-AUTH-005
+title: UAC is enabled and filters remote local-admin tokens
+platform: windows
+category: Authentication
+severity: high
+rationale: >
+  With UAC off, every administrator process runs elevated. With LocalAccountTokenFilterPolicy set to
+  1, any local administrator account gets a full token over the network, which turns one stolen
+  local password or hash into remote code execution on every machine sharing it.
+references:
+  cis:
+    - "Ensure 'User Account Control: Run all administrators in Admin Approval Mode' is set to 'Enabled'"
+    - "Ensure 'Apply UAC restrictions to local accounts on network logons' is set to 'Enabled' (MS only)"
+  anssi: [29]
+check:
+  all:
+    - fact: uac.enable_lua
+      op: eq
+      value: 1
+      default: 1
+    - fact: uac.local_account_token_filter_policy
+      op: eq
+      value: 0
+      default: 0
+remediation:
+  summary: Keep UAC on and remove LocalAccountTokenFilterPolicy (or set it to 0).
+  gpo: Computer Configuration\Policies\Administrative Templates\MS Security Guide\Apply UAC restrictions to local accounts on network logons = Enabled
+  command: |
+    Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name EnableLUA -Value 1 -Type DWord
+    Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name LocalAccountTokenFilterPolicy -Value 0 -Type DWord
+  impact: Remote administration with a local account (not a domain account) loses admin rights; use domain admin groups or LAPS with RDP.

@@ -1,0 +1,4 @@
+# Runtime dependencies. Lock with:
+#   uv pip compile requirements.in --universal --python-version 3.12 --generate-hashes --exclude-newer "$(date -d "-7 days" +%F)" -o requirements.txt
+pyyaml
+jinja2

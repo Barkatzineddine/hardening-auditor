@@ -1,0 +1,39 @@
+id: LNX-SSH-004
+title: SSH offers no weak cipher, MAC or key exchange algorithm
+platform: linux
+category: SSH
+severity: medium
+rationale: >
+  CBC-mode ciphers, RC4, MD5 or truncated MACs and SHA-1 Diffie-Hellman groups are vulnerable to
+  known attacks (plaintext recovery, Logjam, SHA-1 collisions). Modern clients never need them.
+references:
+  cis:
+    - "Ensure sshd Ciphers are configured"
+    - "Ensure sshd MACs are configured"
+    - "Ensure sshd KexAlgorithms is configured"
+  anssi: [21]
+applies_if:
+  fact: ssh.installed
+  op: eq
+  value: true
+check:
+  all:
+    - fact: ssh.ciphers
+      op: none_of
+      value: [3des-cbc, aes128-cbc, aes192-cbc, aes256-cbc, blowfish-cbc, cast128-cbc, arcfour, arcfour128, arcfour256, rijndael-cbc@lysator.liu.se]
+    - fact: ssh.macs
+      op: none_of
+      value: [hmac-md5, hmac-md5-96, hmac-ripemd160, hmac-sha1-96, umac-64@openssh.com, hmac-md5-etm@openssh.com, hmac-md5-96-etm@openssh.com, hmac-ripemd160-etm@openssh.com, hmac-sha1-96-etm@openssh.com, umac-64-etm@openssh.com]
+    - fact: ssh.kexalgorithms
+      op: none_of
+      value: [diffie-hellman-group1-sha1, diffie-hellman-group14-sha1, diffie-hellman-group-exchange-sha1]
+remediation:
+  summary: Restrict Ciphers, MACs and KexAlgorithms to modern algorithms.
+  command: |
+    sudo tee /etc/ssh/sshd_config.d/30-crypto.conf <<'CONF'
+    Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+    MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256
+    KexAlgorithms sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,ecdh-sha2-nistp521,ecdh-sha2-nistp384,ecdh-sha2-nistp256
+    CONF
+    sudo sshd -t && sudo systemctl reload ssh 2>/dev/null || sudo systemctl reload sshd
+  impact: Very old clients and network equipment (old switches, some Java SSH libraries) may fail to negotiate. On RHEL, prefer the system-wide crypto policy (update-crypto-policies --set DEFAULT or FUTURE).

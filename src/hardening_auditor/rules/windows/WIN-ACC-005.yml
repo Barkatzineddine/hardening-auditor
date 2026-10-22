@@ -1,0 +1,20 @@
+id: WIN-ACC-005
+title: Guest account is disabled
+platform: windows
+category: Accounts & passwords
+severity: high
+rationale: >
+  The built-in Guest account lets unauthenticated users log on and reach shared resources.
+references:
+  cis:
+    - "Ensure 'Accounts: Guest account status' is set to 'Disabled'"
+  anssi: [8]
+check:
+  fact: policy.accounts.guest_enabled
+  op: eq
+  value: 0
+remediation:
+  summary: Disable the built-in Guest account (RID 501).
+  gpo: 'Computer Configuration\Policies\Windows Settings\Security Settings\Local Policies\Security Options\Accounts: Guest account status = Disabled'
+  command: Get-LocalUser | Where-Object { $_.SID -like 'S-1-5-*-501' } | Disable-LocalUser
+  impact: None expected; anonymous access to shares should never rely on Guest.

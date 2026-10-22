@@ -1,0 +1,26 @@
+id: LNX-SSH-001
+title: SSH does not allow direct root login
+platform: linux
+category: SSH
+severity: high
+rationale: >
+  Direct root login removes accountability (every administrator is "root" in the logs) and gives
+  brute-force attacks a target whose name is known in advance.
+references:
+  cis:
+    - "Ensure sshd PermitRootLogin is disabled"
+  anssi: [8, 29]
+applies_if:
+  fact: ssh.installed
+  op: eq
+  value: true
+check:
+  fact: ssh.permitrootlogin
+  op: eq
+  value: "no"
+remediation:
+  summary: Log in with a named account and use sudo. Set PermitRootLogin no in sshd_config (or a drop-in in sshd_config.d), then validate and reload.
+  command: |
+    echo 'PermitRootLogin no' | sudo tee /etc/ssh/sshd_config.d/10-hardening.conf
+    sudo sshd -t && sudo systemctl reload ssh 2>/dev/null || sudo systemctl reload sshd
+  impact: Check that a named administrator account with sudo rights can log in, and keep a session open while reloading. Automation that logs in as root needs a dedicated account.

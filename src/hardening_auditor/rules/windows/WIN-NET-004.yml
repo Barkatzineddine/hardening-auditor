@@ -1,0 +1,24 @@
+id: WIN-NET-004
+title: LLMNR multicast name resolution is disabled
+platform: windows
+category: Network protocols
+severity: high
+rationale: >
+  When DNS fails, Windows asks the local network through LLMNR. Any host can answer, which is how
+  tools such as Responder capture NTLM hashes on almost every internal network.
+references:
+  cis:
+    - "Ensure 'Turn off multicast name resolution' is set to 'Enabled' (MS Only)"
+  anssi: [21]
+check:
+  fact: network.llmnr.enable_multicast
+  op: eq
+  value: 0
+  missing: fail
+remediation:
+  summary: Turn off multicast name resolution by GPO.
+  gpo: Computer Configuration\Policies\Administrative Templates\Network\DNS Client\Turn off multicast name resolution = Enabled
+  command: |
+    New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient' -Force | Out-Null
+    Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient' -Name EnableMulticast -Value 0 -Type DWord
+  impact: Names that exist only through local-link discovery stop resolving; register them in DNS.

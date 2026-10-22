@@ -1,0 +1,22 @@
+id: WIN-ACC-001
+title: Minimum password length is 14 characters or more
+platform: windows
+category: Accounts & passwords
+severity: high
+rationale: >
+  Short passwords fall quickly to offline cracking of captured NTLM hashes and to password
+  spraying. Fourteen characters is the floor recommended by the CIS Benchmark for accounts
+  protected by a password alone.
+references:
+  cis:
+    - "Ensure 'Minimum password length' is set to '14 or more character(s)'"
+  anssi: [10]
+check:
+  fact: policy.password.min_length
+  op: gte
+  value: 14
+remediation:
+  summary: Set the minimum password length to 14. On a domain, do it in the Default Domain Policy or a fine-grained password policy; on a member server this local setting only covers local accounts.
+  gpo: Computer Configuration\Policies\Windows Settings\Security Settings\Account Policies\Password Policy\Minimum password length = 14
+  command: net accounts /minpwlen:14
+  impact: Applies at the next password change. Announce the change and offer a password manager first.

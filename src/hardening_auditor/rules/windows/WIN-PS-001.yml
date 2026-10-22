@@ -1,0 +1,24 @@
+id: WIN-PS-001
+title: PowerShell script block logging is enabled
+platform: windows
+category: PowerShell
+severity: medium
+rationale: >
+  Script block logging (event 4104) records the de-obfuscated code that PowerShell actually runs,
+  which defeats most encoding tricks used by attackers and malware.
+references:
+  cis:
+    - "Ensure 'Turn on PowerShell Script Block Logging' is set to 'Enabled'"
+  anssi: [36]
+check:
+  fact: powershell.scriptblock_logging
+  op: eq
+  value: 1
+  missing: fail
+remediation:
+  summary: Turn on script block logging and forward Microsoft-Windows-PowerShell/Operational to the SIEM.
+  gpo: Computer Configuration\Policies\Administrative Templates\Windows Components\Windows PowerShell\Turn on PowerShell Script Block Logging = Enabled
+  command: |
+    New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging' -Force | Out-Null
+    Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging' -Name EnableScriptBlockLogging -Value 1 -Type DWord
+  impact: More log volume; scripts that embed secrets will have them logged, so protect the log.

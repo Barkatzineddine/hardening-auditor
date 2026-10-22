@@ -1,0 +1,28 @@
+id: WIN-AUD-004
+title: Account and group management changes are audited
+platform: windows
+category: Audit & logging
+severity: medium
+rationale: >
+  Account creation, password resets and additions to privileged groups (4720, 4724, 4728, 4732)
+  are typical persistence and privilege escalation steps.
+references:
+  cis:
+    - "Ensure 'Audit User Account Management' is set to 'Success and Failure'"
+    - "Ensure 'Audit Security Group Management' is set to include 'Success'"
+  anssi: [5, 36]
+check:
+  all:
+    - fact: audit.user_account_management
+      op: eq
+      value: success_and_failure
+    - fact: audit.security_group_management
+      op: in
+      value: [success, success_and_failure]
+remediation:
+  summary: Audit User Account Management (success and failure) and Security Group Management (success).
+  gpo: Computer Configuration\Policies\Windows Settings\Security Settings\Advanced Audit Policy Configuration\Audit Policies\Account Management
+  command: |
+    auditpol /set /subcategory:"{0CCE9235-69AE-11D9-BED3-505054503030}" /success:enable /failure:enable
+    auditpol /set /subcategory:"{0CCE9237-69AE-11D9-BED3-505054503030}" /success:enable
+  impact: Low log volume.

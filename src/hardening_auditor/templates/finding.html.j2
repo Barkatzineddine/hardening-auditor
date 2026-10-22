@@ -1,0 +1,25 @@
+<div class="finding-body">
+  <p>{{ r.rule.rationale }}</p>
+  {% if r.reason %}<p class="observed-line"><b>Observed:</b> {{ r.reason }}</p>{% endif %}
+  {% if r.details %}
+  <table class="checks">
+    <thead><tr><th>Fact</th><th>Expected</th><th>Actual</th><th>Result</th></tr></thead>
+    <tbody>
+    {% for d in r.details %}
+      <tr><td><code>{{ d.fact }}</code></td><td><code>{{ d.op }}{% if d.expected is not none %} {{ d.expected|value }}{% endif %}</code></td><td><code>{{ d.actual|value }}</code>{% if d.note %} <span class="muted">({{ d.note }})</span>{% endif %}</td><td><span class="status s-{{ d.outcome.value }}">{{ d.outcome.value }}</span></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  <h4>Remediation</h4>
+  <p>{{ r.rule.remediation.summary }}</p>
+  {% if r.rule.remediation.gpo %}<p><b>GPO:</b> <code>{{ r.rule.remediation.gpo }}</code></p>{% endif %}
+  {% if r.rule.remediation.command %}<pre><code>{{ r.rule.remediation.command }}</code></pre>{% endif %}
+  {% if r.rule.remediation.impact %}<p class="impact"><b>Impact:</b> {{ r.rule.remediation.impact }}</p>{% endif %}
+  <h4>References</h4>
+  <ul class="refs">
+    {% for ref in r.rule.references.cis %}<li><span class="ref-tag">CIS</span> {{ ref }}</li>{% endfor %}
+    {% for m in r.rule.references.anssi %}<li><span class="ref-tag">ANSSI</span> {{ m|anssi }}</li>{% endfor %}
+    {% for ref in r.rule.references.other %}<li><span class="ref-tag">Other</span> {{ ref }}</li>{% endfor %}
+  </ul>
+</div>
