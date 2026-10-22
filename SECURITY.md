@@ -3,7 +3,8 @@
 ## Reporting a vulnerability
 
 Please report vulnerabilities privately through GitHub:
-**Security tab → Report a vulnerability** on this repository.
+**Security tab → Report a vulnerability** on this repository, or directly at
+<https://github.com/Barkatzineddine/hardening-auditor/security/advisories/new>.
 
 Do not open a public issue for security problems. You will get an acknowledgement within
 5 working days, and a fix or mitigation plan once the report is confirmed.

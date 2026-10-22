@@ -1,5 +1,7 @@
 # Test and tooling dependencies, constrained to the runtime lock. Lock with:
-#   uv pip compile requirements-dev.in --universal --python-version 3.12 --generate-hashes --exclude-newer "$(date -d "-7 days" +%F)" -o requirements-dev.txt
+#   uv pip compile requirements-dev.in --universal --python-version 3.12 --generate-hashes \
+#     --exclude-newer "$(date -d "-7 days" +%F)" --exclude-newer-package certifi=2026-10-21 \
+#     -o requirements-dev.txt
 -c requirements.txt
 -r requirements.in
 setuptools
@@ -10,3 +12,6 @@ mypy
 types-pyyaml
 pip-audit
 shellcheck-py
+# Security fixes override the cooldown: certifi 2026.10.19 removes the compromised emSign roots
+# (PYSEC-2026-4320). Development only, through pip-audit and requests.
+certifi>=2026.10.19
