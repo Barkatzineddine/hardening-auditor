@@ -116,22 +116,66 @@ SSHD=""
 for candidate in sshd /usr/sbin/sshd /usr/local/sbin/sshd; do
     if has_cmd "$candidate"; then SSHD=$(command -v "$candidate"); break; fi
 done
+SOH=$(printf '\001')
+sshd_config_stream() {
+    # Global part of sshd_config file $1 (before the first Match), with Include directives
+    # expanded in place as sshd does; $2 is the include depth.
+    if [ "$2" -ge 8 ] || [ ! -r "$1" ]; then return 0; fi
+    awk '{ sub(/#.*/, ""); sub(/^[ \t]+/, ""); sub(/[ \t]+$/, "") }
+        $0 == "" { next }
+        tolower($1) == "match" { exit }
+        tolower($1) == "include" { for (i = 2; i <= NF; i++) print "\001" $i; next }
+        { print }' "$1" |
+        while IFS= read -r line; do
+            case "$line" in
+                "$SOH"*)
+                    pattern=${line#"$SOH"}
+                    case "$pattern" in /*) ;; *) pattern="/etc/ssh/$pattern" ;; esac
+                    # Unquoted on purpose: the pattern is a glob, expanded in sorted order.
+                    # shellcheck disable=SC2086
+                    for included in $pattern; do sshd_config_stream "$included" $(($2 + 1)); done
+                    ;;
+                *) printf '%s\n' "$line" ;;
+            esac
+        done
+}
+
 if [ -n "$SSHD" ]; then
     fact_bool ssh.installed true
     # sshd -T prints the effective configuration (includes, defaults and drop-ins resolved).
-    if SSHD_CONFIG=$("$SSHD" -T 2>/dev/null) && [ -n "$SSHD_CONFIG" ]; then
-        sshd_value() { printf '%s\n' "$SSHD_CONFIG" | awk -v k="$1" '$1 == k { $1 = ""; sub(/^ /, ""); print; exit }'; }
-        for key in permitrootlogin passwordauthentication permitemptypasswords x11forwarding \
-            hostbasedauthentication ignorerhosts loglevel usepam; do
-            fact_str "ssh.$key" "$(sshd_value "$key")"
-        done
-        fact_int ssh.maxauthtries "$(sshd_value maxauthtries)"
-        for key in ciphers macs kexalgorithms; do
-            sshd_value "$key" | tr ',' '\n' | fact_list "ssh.$key"
-        done
+    if SSHD_OUTPUT=$("$SSHD" -T 2>&1) && printf '%s\n' "$SSHD_OUTPUT" | grep -q '^permitrootlogin '; then
+        SSHD_CONFIG=$SSHD_OUTPUT
+        fact_str ssh.config_source "sshd -T"
     else
-        warn "sshd -T failed (needs root and a valid configuration): SSH settings not collected."
+        # sshd -T needs root, and fails while /run/sshd is missing (socket-activated sshd that never
+        # started). Fall back to the configuration files: the first value of a keyword wins, and
+        # OpenSSH defaults apply to keywords that are not set.
+        warn "sshd -T failed ($(printf '%s\n' "$SSHD_OUTPUT" | head -n 1)): SSH settings read from sshd_config; algorithm lists that are not set explicitly are not collected."
+        SSHD_CONFIG=$(sshd_config_stream /etc/ssh/sshd_config 0 |
+            awk '{ k = tolower($1) } !(k in seen) { seen[k] = 1; $1 = ""; sub(/^[ \t]+/, ""); print k, tolower($0) }')
+        for default in "permitrootlogin prohibit-password" "passwordauthentication yes" "permitemptypasswords no" \
+            "x11forwarding no" "hostbasedauthentication no" "ignorerhosts yes" "maxauthtries 6" "loglevel info" \
+            "usepam no"; do
+            if ! printf '%s\n' "$SSHD_CONFIG" | grep -q "^${default%% *} "; then
+                SSHD_CONFIG=$(printf '%s\n%s' "$SSHD_CONFIG" "$default")
+            fi
+        done
+        fact_str ssh.config_source "sshd_config"
     fi
+    sshd_value() { printf '%s\n' "$SSHD_CONFIG" | awk -v k="$1" '$1 == k { $1 = ""; sub(/^ /, ""); print; exit }'; }
+    for key in permitrootlogin passwordauthentication permitemptypasswords x11forwarding \
+        hostbasedauthentication ignorerhosts loglevel usepam; do
+        fact_str "ssh.$key" "$(sshd_value "$key")"
+    done
+    fact_int ssh.maxauthtries "$(sshd_value maxauthtries)"
+    for key in ciphers macs kexalgorithms; do
+        value=$(sshd_value "$key")
+        # "+alg", "-alg" and "^alg" modify the compiled-in list, which only sshd -T can resolve.
+        case "$value" in
+            '' | [+^-]*) ;;
+            *) printf '%s\n' "$value" | tr ',' '\n' | fact_list "ssh.$key" ;;
+        esac
+    done
 else
     fact_bool ssh.installed false
 fi

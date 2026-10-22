@@ -269,7 +269,10 @@ A few design choices worth knowing:
   High Mandatory Level SID, so the Windows collector gives the same result on a French, English or
   German server. The suggested `auditpol` commands use GUIDs for the same reason.
 - **Effective configuration.** `sshd -T` gives the SSH settings after includes and defaults; the
-  firewall profiles are read from the active store (local settings merged with GPO).
+  firewall profiles are read from the active store (local settings merged with GPO). When
+  `sshd -T` cannot run (no root, or a socket-activated sshd on Ubuntu 24.04 that has never
+  started), the collector parses `sshd_config` like sshd does (`Include` expansion, first value
+  wins, `Match` blocks skipped, OpenSSH defaults) and says so in its warnings.
 - **Documented defaults.** When a registry value is absent, Windows applies a default. Rules state
   it (`default: 3` for `LmCompatibilityLevel`), and the report says "not set, using the documented
   default", instead of guessing or reporting a false positive.
@@ -329,7 +332,7 @@ catalogue, and `hardening-auditor validate --rules DIR` checks them.
 
 | Area | What runs in CI |
 |---|---|
-| Real collection | The Windows collector runs with Windows PowerShell 5.1 on `windows-2022` and `windows-2025` runners, the Linux collector as root on `ubuntu-22.04` and `ubuntu-24.04`. Each run is audited with `--max-unknown 0`, and the HTML, JSON, NDJSON and CSV reports are uploaded as the `sample-report-*` artifacts |
+| Real collection | The Windows collector runs with Windows PowerShell 5.1 on `windows-2022` and `windows-2025` runners, the Linux collector as root on `ubuntu-22.04` and `ubuntu-24.04`. Each run is audited with a `--max-unknown` gate (0, or 1 on Ubuntu 24.04 where sshd has never started), and the HTML, JSON, NDJSON and CSV reports are uploaded as the `sample-report-*` artifacts |
 | Portability | The Linux collector also runs inside Debian 12 (dash, mawk) and Rocky Linux 9 (bash, gawk) containers without network access |
 | Engine | ruff (lint and format), mypy `--strict`, 148 pytest tests with a 90 % coverage gate (99 % today), on Ubuntu and Windows |
 | Scripts | ShellCheck (POSIX sh) and PSScriptAnalyzer (warnings and errors, Windows PowerShell 5.1 syntax) |
