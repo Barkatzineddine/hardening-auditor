@@ -47,8 +47,9 @@ trap 'exit 130' INT TERM
 
 # ----------------------------------------------------------------------------- JSON helpers
 json_string() {
-    # Prints its argument as a JSON string literal.
-    printf '%s' "$1" | tr -d '\000-\010\013\014\016-\037' | tr '\t' ' ' |
+    # Prints its argument as a JSON string literal. Control characters are dropped, including the
+    # carriage return that OpenSSH appends to its error messages; tabs become spaces.
+    printf '%s' "$1" | tr -d '\000-\010\013-\037' | tr '\t' ' ' |
         sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' |
         awk 'BEGIN { printf "\"" } NR > 1 { printf "\\n" } { printf "%s", $0 } END { printf "\"" }'
 }
