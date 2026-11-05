@@ -14,4 +14,4 @@ pip-audit
 shellcheck-py
 # Security fixes override the cooldown: certifi 2026.10.19 removes the compromised emSign roots
 # (PYSEC-2026-4320). Development only, through pip-audit and requests.
-certifi>=2026.10.19
+certifi>=2026.10.23
